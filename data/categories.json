@@ -10,5 +10,18 @@
   { "id": "C009", "name": "Stationery", "icon": "icon_stationery.png", "active": true },
   { "id": "C010", "name": "Umbrellas", "icon": "icon_umbrellas.png", "active": true },
   { "id": "C011", "name": "Water Bottles", "icon": "icon_bottles.png", "active": true },
-  { "id": "C012", "name": "Archived/Old", "icon": "icon_other.png", "active": false }
+  { "id": "C012", "name": "Archived/Old", "icon": "icon_other.png", "active": false },
+  { "id": "C013", "name": "Pets & Animals", "icon": "icon_pets.png", "active": true },
+  { "id": "C014", "name": "Jewelry", "icon": "icon_jewelry.png", "active": true },
+  { "id": "C015", "name": "Watches", "icon": "icon_watches.png", "active": true },
+  { "id": "C016", "name": "Sports Equipment", "icon": "icon_sports.png", "active": true },
+  { "id": "C017", "name": "Musical Instruments", "icon": "icon_music.png", "active": true },
+  { "id": "C018", "name": "Toys & Games", "icon": "icon_toys.png", "active": true },
+  { "id": "C019", "name": "Cosmetics", "icon": "icon_cosmetics.png", "active": true },
+  { "id": "C020", "name": "Medications", "icon": "icon_meds.png", "active": true },
+  { "id": "C021", "name": "Tools & Hardware", "icon": "icon_tools.png", "active": true },
+  { "id": "C022", "name": "Footwear", "icon": "icon_shoes.png", "active": true },
+  { "id": "C023", "name": "Art Supplies", "icon": "icon_art.png", "active": true },
+  { "id": "C024", "name": "Groceries", "icon": "icon_groceries.png", "active": true },
+  { "id": "C025", "name": "Miscellaneous", "icon": "icon_misc.png", "active": true }
 ]

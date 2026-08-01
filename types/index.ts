@@ -47,9 +47,8 @@ export interface Message {
 }
 
 export interface ClaimAnswers {
-  identifyingDetail: string;
-  lossContext: string;
-  privateEvidence: string;
+  uniqueMark: string;
+  privateItem: string;
 }
 
 export interface Claim {
