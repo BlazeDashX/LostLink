@@ -1,0 +1,14 @@
+[
+  { "id": "C001", "name": "Electronics", "icon": "icon_electronics.png", "active": true },
+  { "id": "C002", "name": "Documents", "icon": "icon_documents.png", "active": true },
+  { "id": "C003", "name": "Bags & Luggage", "icon": "icon_bags.png", "active": true },
+  { "id": "C004", "name": "Keys", "icon": "icon_keys.png", "active": true },
+  { "id": "C005", "name": "Wallets", "icon": "icon_wallets.png", "active": true },
+  { "id": "C006", "name": "Clothing", "icon": "icon_clothing.png", "active": true },
+  { "id": "C007", "name": "Eyewear", "icon": "icon_eyewear.png", "active": true },
+  { "id": "C008", "name": "Books", "icon": "icon_books.png", "active": true },
+  { "id": "C009", "name": "Stationery", "icon": "icon_stationery.png", "active": true },
+  { "id": "C010", "name": "Umbrellas", "icon": "icon_umbrellas.png", "active": true },
+  { "id": "C011", "name": "Water Bottles", "icon": "icon_bottles.png", "active": true },
+  { "id": "C012", "name": "Archived/Old", "icon": "icon_other.png", "active": false }
+]

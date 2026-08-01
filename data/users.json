@@ -1,0 +1,14 @@
+[
+  { "id": "U001", "name": "Abdul Kaiyum", "email": "abdul@example.com", "password": "password123", "phone": "01700000001", "role": "User", "status": "Active", "avatar": "user_01.png" },
+  { "id": "U002", "name": "Ayesha Rahman", "email": "ayesha@example.com", "password": "password123", "phone": "01700000002", "role": "User", "status": "Active", "avatar": "user_02.png" },
+  { "id": "U003", "name": "Rakib Hasan", "email": "rakib@example.com", "password": "password123", "phone": "01700000003", "role": "User", "status": "Active", "avatar": "user_03.png" },
+  { "id": "U004", "name": "Nusrat Jahan", "email": "nusrat@example.com", "password": "password123", "phone": "01700000004", "role": "User", "status": "Active", "avatar": "user_04.png" },
+  { "id": "U005", "name": "Fahim Ahmed", "email": "fahim@example.com", "password": "password123", "phone": "01700000005", "role": "User", "status": "Active", "avatar": "user_05.png" },
+  { "id": "U006", "name": "Sadia Islam", "email": "sadia@example.com", "password": "password123", "phone": "01700000006", "role": "User", "status": "Active", "avatar": "user_06.png" },
+  { "id": "U007", "name": "Tanvir Rahman", "email": "tanvir@example.com", "password": "password123", "phone": "01700000007", "role": "User", "status": "Active", "avatar": "user_07.png" },
+  { "id": "U008", "name": "Mehzabin Chowdhury", "email": "mehzabin@example.com", "password": "password123", "phone": "01700000008", "role": "User", "status": "Active", "avatar": "user_08.png" },
+  { "id": "U009", "name": "Imran Hossain", "email": "imran@example.com", "password": "password123", "phone": "01700000009", "role": "User", "status": "Active", "avatar": "user_09.png" },
+  { "id": "U010", "name": "Bad Actor", "email": "banned@example.com", "password": "password123", "phone": "01700000010", "role": "User", "status": "Suspended", "avatar": "placeholder.png" },
+  { "id": "A001", "name": "System Admin", "email": "admin@example.com", "password": "adminpassword", "phone": "01700000011", "role": "Admin", "status": "Active", "avatar": "admin_01.png" },
+  { "id": "A002", "name": "Moderator Two", "email": "mod@example.com", "password": "adminpassword", "phone": "01700000012", "role": "Admin", "status": "Active", "avatar": "admin_02.png" }
+]

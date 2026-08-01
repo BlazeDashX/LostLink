@@ -1,0 +1,14 @@
+[
+  { "id": "M001", "conversationId": "CV001", "itemId": "I001", "senderId": "U003", "receiverId": "U002", "text": "Hi, I saw your post about the brown wallet.", "sentAt": "2026-07-26T10:30:00", "read": true },
+  { "id": "M002", "conversationId": "CV001", "itemId": "I001", "senderId": "U002", "receiverId": "U003", "text": "Yes, can you describe what is inside?", "sentAt": "2026-07-26T10:31:00", "read": true },
+  { "id": "M003", "conversationId": "CV001", "itemId": "I001", "senderId": "U003", "receiverId": "U002", "text": "I think there is a folded receipt behind the card slot.", "sentAt": "2026-07-26T10:34:00", "read": false },
+  { "id": "M004", "conversationId": "CV002", "itemId": "I004", "senderId": "U002", "receiverId": "U005", "text": "Hello, I believe that is my MacBook.", "sentAt": "2026-07-24T11:55:00", "read": true },
+  { "id": "M005", "conversationId": "CV002", "itemId": "I004", "senderId": "U005", "receiverId": "U002", "text": "Great! Please submit an official claim through the app.", "sentAt": "2026-07-24T11:57:00", "read": true },
+  { "id": "M006", "conversationId": "CV002", "itemId": "I004", "senderId": "U002", "receiverId": "U005", "text": "Just did! Let me know when you review it.", "sentAt": "2026-07-24T12:01:00", "read": true },
+  { "id": "M007", "conversationId": "CV003", "itemId": "I010", "senderId": "U009", "receiverId": "U001", "text": "Hi Abdul, where exactly in room 402 did you find the book?", "sentAt": "2026-07-28T15:30:00", "read": false },
+  { "id": "M008", "conversationId": "CV003", "itemId": "I010", "senderId": "U001", "receiverId": "U009", "text": "It was on the third desk in the middle row.", "sentAt": "2026-07-28T15:35:00", "read": false },
+  { "id": "M009", "conversationId": "CV004", "itemId": "I011", "senderId": "U006", "receiverId": "U002", "text": "Is the calculator still available to claim?", "sentAt": "2026-07-27T18:45:00", "read": true },
+  { "id": "M010", "conversationId": "CV004", "itemId": "I011", "senderId": "U002", "receiverId": "U006", "text": "Yes it is, nobody has submitted a claim yet.", "sentAt": "2026-07-27T18:50:00", "read": true },
+  { "id": "M011", "conversationId": "CV005", "itemId": "I007", "senderId": "U004", "receiverId": "U008", "text": "Thank you so much for returning the umbrella!", "sentAt": "2026-07-20T18:15:00", "read": true },
+  { "id": "M012", "conversationId": "CV005", "itemId": "I007", "senderId": "U008", "receiverId": "U004", "text": "You're welcome! Glad you got it back safely.", "sentAt": "2026-07-20T18:20:00", "read": true }
+]
