@@ -1,21 +1,268 @@
 [
-  { "id": "CL001", "itemId": "I003", "claimantId": "U001", "answers": { "uniqueMark": "Lanyard has a small burn mark.", "privateItem": "My name 'Abdul' is printed on the back." }, "handoverMethod": "Meet reporter", "status": "Pending", "reviewedBy": null, "createdAt": "2026-07-27T10:38:00" },
-  { "id": "CL002", "itemId": "I004", "claimantId": "U002", "answers": { "uniqueMark": "Batman sticker on the bottom right.", "privateItem": "The desktop wallpaper is a picture of a mountain." }, "handoverMethod": "Security desk", "status": "Approved", "reviewedBy": "U005", "createdAt": "2026-07-24T12:00:00" },
-  { "id": "CL003", "itemId": "I005", "claimantId": "U001", "answers": { "uniqueMark": "The spider-man keychain is missing an arm.", "privateItem": "There is a small silver mailbox key attached." }, "handoverMethod": "Meet reporter", "status": "Approved", "reviewedBy": "U006", "createdAt": "2026-07-23T17:00:00" },
-  { "id": "CL004", "itemId": "I006", "claimantId": "U003", "answers": { "uniqueMark": "Right strap has a white paint stain.", "privateItem": "A green notebook is in the front pocket." }, "handoverMethod": "Security desk", "status": "Approved", "reviewedBy": "U007", "createdAt": "2026-07-22T09:30:00" },
-  { "id": "CL005", "itemId": "I007", "claimantId": "U004", "answers": { "uniqueMark": "The handle is slightly chipped.", "privateItem": "There is a 'Target' tag still on the inside." }, "handoverMethod": "Meet reporter", "status": "Completed", "reviewedBy": "U008", "createdAt": "2026-07-20T18:10:00" },
-  { "id": "CL006", "itemId": "I001", "claimantId": "U006", "answers": { "uniqueMark": "It's brown.", "privateItem": "There is money inside." }, "handoverMethod": "Security desk", "status": "Rejected", "reviewedBy": "U002", "createdAt": "2026-07-26T11:00:00" },
-  { "id": "CL007", "itemId": "I009", "claimantId": "U005", "answers": { "uniqueMark": "The case has a scratch on the zipper.", "privateItem": "A microfiber cloth with an optician's logo is inside." }, "handoverMethod": "Meet reporter", "status": "Pending", "reviewedBy": null, "createdAt": "2026-07-28T13:00:00" },
-  { "id": "CL008", "itemId": "I002", "claimantId": "U001", "answers": { "uniqueMark": "They are black.", "privateItem": "Nothing else." }, "handoverMethod": "Meet reporter", "status": "Rejected", "reviewedBy": "U003", "createdAt": "2026-07-25T15:00:00" },
-  { "id": "CL009", "itemId": "I004", "claimantId": "U007", "answers": { "uniqueMark": "It's a silver macbook.", "privateItem": "Has a charger." }, "handoverMethod": "Meet reporter", "status": "Rejected", "reviewedBy": "U005", "createdAt": "2026-07-24T11:50:00" },
-  { "id": "CL010", "itemId": "I010", "claimantId": "U009", "answers": { "uniqueMark": "Page 55 is dog-eared.", "privateItem": "My library card is used as a bookmark inside." }, "handoverMethod": "Security desk", "status": "Pending", "reviewedBy": null, "createdAt": "2026-07-28T16:00:00" },
-  { "id": "CL011", "itemId": "I011", "claimantId": "U006", "answers": { "uniqueMark": "Initials 'SI' carved on the back panel.", "privateItem": "Battery cover is slightly loose." }, "handoverMethod": "Meet reporter", "status": "Pending", "reviewedBy": null, "createdAt": "2026-07-27T19:00:00" },
-  { "id": "CL012", "itemId": "I012", "claimantId": "U008", "answers": { "uniqueMark": "Dent on the bottom left.", "privateItem": "Smells like coffee." }, "handoverMethod": "Security desk", "status": "Pending", "reviewedBy": null, "createdAt": "2026-07-26T20:00:00" },
-  { "id": "CL013", "itemId": "I013", "claimantId": "U014", "answers": { "uniqueMark": "Small white spot on left ear.", "privateItem": "Responds to the name 'Milo'." }, "handoverMethod": "Meet reporter", "status": "Pending", "reviewedBy": null, "createdAt": "2026-07-29T10:30:00" },
-  { "id": "CL014", "itemId": "I015", "claimantId": "U015", "answers": { "uniqueMark": "Scratch on top side of aluminum case.", "privateItem": "Serial number ends in 892." }, "handoverMethod": "Security desk", "status": "Pending", "reviewedBy": null, "createdAt": "2026-07-29T11:45:00" },
-  { "id": "CL015", "itemId": "I017", "claimantId": "U015", "answers": { "uniqueMark": "Custom escape keycap (red).", "privateItem": "USB-C cable has black braiding." }, "handoverMethod": "Meet reporter", "status": "Pending", "reviewedBy": null, "createdAt": "2026-07-29T14:15:00" },
-  { "id": "CL018", "itemId": "I019", "claimantId": "U021", "answers": { "uniqueMark": "Green tag says 'Storage 3'.", "privateItem": "One key is a brass Yale key." }, "handoverMethod": "Security desk", "status": "Approved", "reviewedBy": "U024", "createdAt": "2026-07-30T09:45:00" },
-  { "id": "CL021", "itemId": "I021", "claimantId": "U024", "answers": { "uniqueMark": "Left arm has a slight bend.", "privateItem": "+1.5 prescription lenses." }, "handoverMethod": "Meet reporter", "status": "Pending", "reviewedBy": null, "createdAt": "2026-07-30T10:20:00" },
-  { "id": "CL023", "itemId": "I025", "claimantId": "U017", "answers": { "uniqueMark": "Rubber feet on bottom are missing.", "privateItem": "Contains a folder named 'Project_2026'." }, "handoverMethod": "Meet reporter", "status": "Approved", "reviewedBy": "U013", "createdAt": "2026-07-31T10:15:00" },
-  { "id": "CL025", "itemId": "I025", "claimantId": "U025", "answers": { "uniqueMark": "Black WD 2TB casing with scratch near logo.", "privateItem": "Formatted as NTFS with 'Backup_Photos' volume label." }, "handoverMethod": "Security desk", "status": "Pending", "reviewedBy": null, "createdAt": "2026-08-01T09:30:00" }
+  {
+    "id": "CL001",
+    "itemId": "I003",
+    "claimantId": "U001",
+    "answers": {
+      "identifyingDetail": "Lanyard has a small burn mark.",
+      "lossContext": "I dropped it near AIUB campus entrance while rushing to class.",
+      "privateEvidence": "My name 'Abdul' is printed on the back."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-07-27T10:38:00"
+  },
+  {
+    "id": "CL002",
+    "itemId": "I004",
+    "claimantId": "U002",
+    "answers": {
+      "identifyingDetail": "Batman sticker on the bottom right corner.",
+      "lossContext": "Left it on a study table in the library building yesterday afternoon.",
+      "privateEvidence": "The desktop wallpaper is a picture of a mountain."
+    },
+    "handoverMethod": "Security desk",
+    "status": "Approved",
+    "reviewedBy": "U005",
+    "createdAt": "2026-07-24T12:00:00"
+  },
+  {
+    "id": "CL003",
+    "itemId": "I005",
+    "claimantId": "U001",
+    "answers": {
+      "identifyingDetail": "The spider-man keychain is missing an arm.",
+      "lossContext": "Fell out of my pocket while walking through Bashundhara R/A.",
+      "privateEvidence": "There is a small silver mailbox key attached."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Approved",
+    "reviewedBy": "U006",
+    "createdAt": "2026-07-23T17:00:00"
+  },
+  {
+    "id": "CL004",
+    "itemId": "I006",
+    "claimantId": "U003",
+    "answers": {
+      "identifyingDetail": "Right strap has a white paint stain.",
+      "lossContext": "Forgot it on the bench near the campus cafeteria around 1 PM.",
+      "privateEvidence": "A green notebook is in the front pocket."
+    },
+    "handoverMethod": "Security desk",
+    "status": "Approved",
+    "reviewedBy": "U007",
+    "createdAt": "2026-07-22T09:30:00"
+  },
+  {
+    "id": "CL005",
+    "itemId": "I007",
+    "claimantId": "U004",
+    "answers": {
+      "identifyingDetail": "The handle is slightly chipped at the base.",
+      "lossContext": "Left it leaning against the wall at Gate 2 during rain.",
+      "privateEvidence": "There is a 'Target' tag still on the inside."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Completed",
+    "reviewedBy": "U008",
+    "createdAt": "2026-07-20T18:10:00"
+  },
+  {
+    "id": "CL006",
+    "itemId": "I001",
+    "claimantId": "U006",
+    "answers": {
+      "identifyingDetail": "It's a brown bi-fold leather wallet.",
+      "lossContext": "Dropped somewhere near Dhanmondi 27 bus stop.",
+      "privateEvidence": "Contains money and my student library card."
+    },
+    "handoverMethod": "Security desk",
+    "status": "Rejected",
+    "reviewedBy": "U002",
+    "createdAt": "2026-07-26T11:00:00"
+  },
+  {
+    "id": "CL007",
+    "itemId": "I009",
+    "claimantId": "U005",
+    "answers": {
+      "identifyingDetail": "The case has a scratch on the zipper.",
+      "lossContext": "Misplaced it while having lunch at Gulshan 1 restaurant.",
+      "privateEvidence": "A microfiber cloth with an optician's logo is inside."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-07-28T13:00:00"
+  },
+  {
+    "id": "CL008",
+    "itemId": "I002",
+    "claimantId": "U001",
+    "answers": {
+      "identifyingDetail": "Black wireless earbuds in a matte case.",
+      "lossContext": "Left on a park bench in Banani.",
+      "privateEvidence": "Left earbud has a tiny nick on the rubber tip."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Rejected",
+    "reviewedBy": "U003",
+    "createdAt": "2026-07-25T15:00:00"
+  },
+  {
+    "id": "CL009",
+    "itemId": "I004",
+    "claimantId": "U007",
+    "answers": {
+      "identifyingDetail": "It's a silver macbook.",
+      "lossContext": "Left in study hall during morning session.",
+      "privateEvidence": "Has an original Apple USB-C charger included."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Rejected",
+    "reviewedBy": "U005",
+    "createdAt": "2026-07-24T11:50:00"
+  },
+  {
+    "id": "CL010",
+    "itemId": "I010",
+    "claimantId": "U009",
+    "answers": {
+      "identifyingDetail": "Page 55 is dog-eared.",
+      "lossContext": "Forgot it under the seat in Room 402 after physics lecture.",
+      "privateEvidence": "My library card is used as a bookmark inside."
+    },
+    "handoverMethod": "Security desk",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-07-28T16:00:00"
+  },
+  {
+    "id": "CL011",
+    "itemId": "I011",
+    "claimantId": "U006",
+    "answers": {
+      "identifyingDetail": "Initials 'SI' carved on the back panel.",
+      "lossContext": "Left on desk in Exam Hall B after midterm exam.",
+      "privateEvidence": "Battery cover is slightly loose."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-07-27T19:00:00"
+  },
+  {
+    "id": "CL012",
+    "itemId": "I012",
+    "claimantId": "U008",
+    "answers": {
+      "identifyingDetail": "Dent on the bottom left.",
+      "lossContext": "Left on gym equipment bench after workout.",
+      "privateEvidence": "Smells like coffee inside."
+    },
+    "handoverMethod": "Security desk",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-07-26T20:00:00"
+  },
+  {
+    "id": "CL013",
+    "itemId": "I013",
+    "claimantId": "U014",
+    "answers": {
+      "identifyingDetail": "Small white spot on left ear.",
+      "lossContext": "Kitten wandered off near Mohakhali DOHS park.",
+      "privateEvidence": "Responds to the name 'Milo'."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-07-29T10:30:00"
+  },
+  {
+    "id": "CL014",
+    "itemId": "I015",
+    "claimantId": "U015",
+    "answers": {
+      "identifyingDetail": "Scratch on top side of aluminum case.",
+      "lossContext": "Slipped off wrist while jogging in Ramna Park.",
+      "privateEvidence": "Serial number ends in 892."
+    },
+    "handoverMethod": "Security desk",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-07-29T11:45:00"
+  },
+  {
+    "id": "CL015",
+    "itemId": "I017",
+    "claimantId": "U015",
+    "answers": {
+      "identifyingDetail": "Custom escape keycap (red).",
+      "lossContext": "Left plugged in at Computer Lab 3 station.",
+      "privateEvidence": "USB-C cable has black custom braiding."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-07-29T14:15:00"
+  },
+  {
+    "id": "CL018",
+    "itemId": "I019",
+    "claimantId": "U021",
+    "answers": {
+      "identifyingDetail": "Green tag says 'Storage 3'.",
+      "lossContext": "Dropped near Mirpur 10 bus stop.",
+      "privateEvidence": "One key is a brass Yale key."
+    },
+    "handoverMethod": "Security desk",
+    "status": "Approved",
+    "reviewedBy": "U024",
+    "createdAt": "2026-07-30T09:45:00"
+  },
+  {
+    "id": "CL021",
+    "itemId": "I021",
+    "claimantId": "U024",
+    "answers": {
+      "identifyingDetail": "Left arm has a slight bend.",
+      "lossContext": "Left on desk in Room 205.",
+      "privateEvidence": "+1.5 prescription lenses."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-07-30T10:20:00"
+  },
+  {
+    "id": "CL023",
+    "itemId": "I025",
+    "claimantId": "U017",
+    "answers": {
+      "identifyingDetail": "Rubber feet on bottom are missing.",
+      "lossContext": "Left at Central Library reading table.",
+      "privateEvidence": "Contains a root folder named 'Project_2026'."
+    },
+    "handoverMethod": "Meet reporter",
+    "status": "Approved",
+    "reviewedBy": "U013",
+    "createdAt": "2026-07-31T10:15:00"
+  },
+  {
+    "id": "CL025",
+    "itemId": "I025",
+    "claimantId": "U025",
+    "answers": {
+      "identifyingDetail": "Black WD 2TB casing with scratch near logo.",
+      "lossContext": "Forgot it in the library study room.",
+      "privateEvidence": "Formatted as NTFS with 'Backup_Photos' volume label."
+    },
+    "handoverMethod": "Security desk",
+    "status": "Pending",
+    "reviewedBy": null,
+    "createdAt": "2026-08-01T09:30:00"
+  }
 ]

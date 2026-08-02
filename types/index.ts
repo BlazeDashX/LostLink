@@ -9,6 +9,7 @@ export type ItemStatus =
   | "Received"
   | "Solved"
   | "Hidden";
+
 export type ClaimStatus = "Pending" | "Approved" | "Rejected" | "Completed";
 
 export interface User {
@@ -47,8 +48,9 @@ export interface Message {
 }
 
 export interface ClaimAnswers {
-  uniqueMark: string;
-  privateItem: string;
+  identifyingDetail: string;
+  lossContext: string;
+  privateEvidence: string;
 }
 
 export interface Claim {

@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     backgroundColor: COLORS.surface,
-    borderBottomColor: COLORS.border,
+    borderColor: COLORS.border,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
@@ -42,5 +42,11 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
   },
-  input: { color: COLORS.text, flex: 1, fontSize: 15, paddingVertical: 12 },
+  input: {
+    color: COLORS.text,
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 12,
+    outlineStyle: "none",
+  } as any,
 });
