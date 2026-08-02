@@ -41,3 +41,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Teammates' features (local dev, ignored by Git)
+app/(tab)/home/
+app/(tab)/feed/
+app/(tab)/report/item/
+

@@ -10,7 +10,7 @@ import ItemSummaryCard from "@/components/item-summary-card";
 import PrimaryButton from "@/components/primary-button";
 import PrivacyNotice from "@/components/privacy-notice";
 import { COLORS, SPACING } from "@/constants/theme";
-import { useApp } from "@/app/context/AppContext";
+import { useApp } from "@/context/AppContext";
 import { ClaimAnswers } from "@/types";
 
 type ClaimFormData = ClaimAnswers & { handoverMethod: string };
@@ -145,7 +145,7 @@ export default function SubmitClaimScreen() {
     Alert.alert("Claim submitted", result.message, [
       {
         text: "View status",
-        onPress: () => router.replace({ pathname: "/claim/review", params: { claimId: result.claimId } }),
+        onPress: () => router.replace({ pathname: "/report/claim/review", params: { claimId: result.claimId } }),
       },
     ]);
   };

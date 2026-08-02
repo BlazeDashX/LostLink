@@ -9,7 +9,7 @@ import ItemSummaryCard from "@/components/item-summary-card";
 import PrimaryButton from "@/components/primary-button";
 import StatusBadge from "@/components/status-badge";
 import { COLORS, SPACING } from "@/constants/theme";
-import { useApp } from "@/app/context/AppContext";
+import { useApp } from "@/context/AppContext";
 
 type ClaimReviewParams = {
   claimId?: string;
