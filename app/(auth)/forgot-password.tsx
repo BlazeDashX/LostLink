@@ -1,65 +1,92 @@
-import { View, StyleSheet, Text, Pressable } from "react-native";
+import { useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Text,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
-import BrandLogo from "@/components/BrandLogo";
 import FormField from "@/components/FormField";
 import PrimaryButton from "@/components/PrimaryButton";
 import { COLORS } from "@/constants/colors";
+import users from "@/data/users.json";
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
+  const [email, setEmail] = useState("");
+
+  const handleReset = () => {
+    if (!email.trim()) {
+      Alert.alert("Error", "Please enter your email.");
+      return;
+    }
+
+    const emailRegex = /\S+@\S+\.\S+/;
+
+    if (!emailRegex.test(email)) {
+      Alert.alert("Error", "Please enter a valid email.");
+      return;
+    }
+
+    users.find(
+      (u) => u.email.toLowerCase() === email.toLowerCase()
+    );
+
+    Alert.alert(
+      "Reset Request",
+      "If an account exists, reset instruction has been simulated.",
+      [
+        {
+          text: "OK",
+          onPress: () => router.replace("/login"),
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <BrandLogo />
 
-        <Text style={styles.title}>Welcome Back</Text>
+        <View style={styles.iconContainer}>
+          <Ionicons
+            name="lock-closed-outline"
+            size={46}
+            color={COLORS.primary}
+          />
+        </View>
+
+        <Text style={styles.title}>
+          Reset access
+        </Text>
 
         <Text style={styles.subtitle}>
-          Sign in to continue your journey
+          Enter the email used in the simulated account.
+          {"\n"}
+          LostLink will show a confirmation alert.
         </Text>
 
         <FormField
-          label="Email Address"
+          label="Email"
           placeholder="Enter your email"
+          value={email}
+          onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
         />
 
-        <FormField
-          label="Password"
-          placeholder="Enter your password"
-          showPasswordToggle
-        />
-
-        <View style={styles.forgotPasswordContainer}>
-          <Pressable
-            onPress={() => router.push("/(auth)/forgot-password")}
-          >
-            <Text style={styles.forgotPasswordText}>
-              Forgot Password?
-            </Text>
-          </Pressable>
-        </View>
-
         <PrimaryButton
-          title="Login"
+          title="Send Reset Instruction"
+          onPress={handleReset}
         />
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Don`&apos;t have an account?
-          </Text>
+        <Text style={styles.note}>
+          No email is actually sent in this frontend prototype.
+        </Text>
 
-          <Pressable
-            onPress={() => router.push("/register")}
-          >
-            <Text style={styles.registerText}>
-              Register
-            </Text>
-          </Pressable>
-        </View>
       </View>
     </SafeAreaView>
   );
@@ -68,7 +95,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: "#FFFFFF",
   },
 
   content: {
@@ -77,49 +104,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
 
+  iconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#EAF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+    marginBottom: 28,
+  },
+
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "700",
     color: COLORS.textPrimary,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 12,
   },
 
   subtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
     textAlign: "center",
-    marginBottom: 40,
-  },
-
-  forgotPasswordContainer: {
-    alignItems: "flex-end",
-    marginTop: 8,
-    marginBottom: 24,
-  },
-
-  forgotPasswordText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 24,
-  },
-
-  footerText: {
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 36,
   },
 
-  registerText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 4,
+  note: {
+    marginTop: 18,
+    textAlign: "center",
+    color: COLORS.textSecondary,
+    fontSize: 12,
   },
 });
