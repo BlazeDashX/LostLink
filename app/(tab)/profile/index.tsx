@@ -1,4 +1,4 @@
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
@@ -11,7 +11,7 @@ import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 
 export default function ProfileScreen() {
-  const { currentUserId, users } = useApp();
+  const { currentUserId, users,logout } = useApp();
 
   const currentUser = users.find(
     (user) => user.id === currentUserId
@@ -25,21 +25,14 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: () => router.replace("/(auth)/login"),
-        },
-      ]
+    const confirmed = window.confirm(
+      "Are you sure you want to logout?"
     );
+
+    if(!confirmed) return;
+
+    logout();
+    router.replace("/(auth)/login");
   };
 
   return (

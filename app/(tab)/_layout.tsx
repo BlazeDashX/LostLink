@@ -1,6 +1,14 @@
-import { Tabs } from "expo-router";
+import { Tabs,Redirect } from "expo-router";
+import { useApp } from "@/context/AppContext";
 
 export default function TabLayout() {
+
+  const { isAuthenticated } = useApp();
+
+  if(!isAuthenticated){
+    return <Redirect href="/(auth)/login"/>
+  }
+
   return (
     <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="home" options={{ title: "Home" }} />
