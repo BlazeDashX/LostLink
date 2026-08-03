@@ -1,5 +1,6 @@
-import { Alert,ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 
 import AppHeader from "@/components/app-header";
 import ProfileSummary from "@/components/profile-summary";
@@ -11,7 +12,11 @@ import { useApp } from "@/context/AppContext";
 
 export default function ProfileScreen() {
   const { currentUserId, users } = useApp();
-  const currentUser = users.find((user) => user.id === currentUserId);
+
+  const currentUser = users.find(
+    (user) => user.id === currentUserId
+  );
+
   const comingSoon = (feature: string) => {
     Alert.alert(
       feature,
@@ -19,9 +24,28 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: () => router.replace("/(auth)/login"),
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.screen}>
       <AppHeader title="Profile" />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -61,31 +85,37 @@ export default function ProfileScreen() {
           />
         </View>
 
-  <PrimaryButton
-    title="Logout"
-  />
-</ScrollView>
+        <View style={styles.buttonContainer}>
+          <PrimaryButton
+            title="Logout"
+            onPress={handleLogout}
+          />
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: COLORS.background, flex: 1 },
-  content: { padding: SPACING.lg },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: SPACING.lg,
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.background,
   },
-  name: { color: COLORS.text, fontSize: 20, fontWeight: "800", marginBottom: SPACING.xs },
-  detail: { color: COLORS.textMuted, fontSize: 14, marginTop: 4 },
+
+  content: {
+    padding: SPACING.lg,
+    paddingBottom: 32,
+  },
+
   menuContainer: {
-  marginTop: 12,
-  backgroundColor: COLORS.surface,
-  borderRadius: 16,
-  paddingHorizontal: SPACING.md,
-  paddingVertical: SPACING.sm,
-},
+    marginTop: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+
+  buttonContainer: {
+    marginTop: 28,
+  },
 });
