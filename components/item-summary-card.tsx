@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { COLORS, SPACING } from "@/constants/theme";
 import { Item } from "@/types";
@@ -7,11 +8,24 @@ import StatusBadge from "./status-badge";
 
 interface ItemSummaryCardProps {
   item: Item;
+  onPress?: () => void;
 }
 
-export default function ItemSummaryCard({ item }: ItemSummaryCardProps) {
+export default function ItemSummaryCard({ item, onPress }: ItemSummaryCardProps) {
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      router.push({ pathname: "/report/item/[id]", params: { id: item.id } } as any);
+    }
+  };
+
   return (
-    <View style={styles.card}>
+    <Pressable
+      accessibilityLabel={`View details for ${item.title}`}
+      onPress={handlePress}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+    >
       <View style={styles.iconArea}>
         <Ionicons color={COLORS.primary} name="cube-outline" size={30} />
       </View>
@@ -26,7 +40,7 @@ export default function ItemSummaryCard({ item }: ItemSummaryCardProps) {
           <StatusBadge status={item.status} />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -39,6 +53,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: SPACING.lg,
   },
+  pressed: { opacity: 0.8 },
   iconArea: {
     alignItems: "center",
     backgroundColor: COLORS.primaryLight,

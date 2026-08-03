@@ -45,6 +45,9 @@ interface AppContextType {
   notifications: Notification[];
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
 
+  // Item Actions
+  addItem: (data: Omit<Item, "id" | "reporterId" | "status" | "createdAt">) => ActionResponse;
+
   // Claim Actions
   submitClaim: (data: SubmitClaimData) => ActionResponse;
   approveClaim: (claimId: string) => ActionResponse;
@@ -142,6 +145,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return claims.find(c => c.id === claimId);
   };
 
+  const addItem = (data: Omit<Item, "id" | "reporterId" | "status" | "createdAt">): ActionResponse => {
+    const newItem: Item = {
+      id: `I${String(items.length + 1).padStart(3, "0")}`,
+      ...data,
+      reporterId: currentUserId,
+      status: "Active",
+      createdAt: new Date().toISOString(),
+    };
+
+    setItems((prev) => [newItem, ...prev]);
+    return { ok: true, message: "Item reported successfully.", claimId: newItem.id };
+  };
+
   const getClaimsByItem = (itemId: string): Claim[] => {
     return claims.filter(c => c.itemId === itemId);
   };
@@ -160,6 +176,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setClaims,
         notifications,
         setNotifications,
+        addItem,
         submitClaim,
         approveClaim,
         rejectClaim,
