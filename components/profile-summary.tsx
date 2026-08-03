@@ -1,18 +1,42 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function ProfileSummary() {
+type Props = {
+  name: string;
+  email: string;
+};
+
+export default function ProfileSummary({
+  name,
+  email,
+}: Props) {
+
+  const initials = name
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <View style={styles.container}>
       <View style={styles.avatar}>
-        <Text style={styles.initials}>AK</Text>
+        <Text style={styles.initials}>
+          {initials}
+        </Text>
       </View>
 
-      <Text style={styles.name}>Abdul Kaiyum</Text>
+      <Text style={styles.name}>
+        {name}
+      </Text>
 
-      <Text style={styles.email}>abdul@example.com</Text>
+      <Text style={styles.email}>
+        {email}
+      </Text>
 
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>Verified User</Text>
+        <Text style={styles.badgeText}>
+          Verified User
+        </Text>
       </View>
     </View>
   );
