@@ -66,6 +66,13 @@ interface AppContextType {
     password: string
   )=> ActionResponse;
 
+  register: (
+    name: string,
+    email: string,
+    phone: string,
+    password: string
+  ) => ActionResponse;
+
   logout: ()=> void;
 }
 
@@ -87,6 +94,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setClaims(claimsData as Claim[]);
     setNotifications(notificationsData as Notification[]);
   }, []);
+
+  const register = (
+    name: string,
+    email: string,
+    phone: string,
+    password:string
+  ): ActionResponse =>{
+    const existingUser = users.find(
+      (user)=>
+        user.email.toLowerCase() ===
+      email.toLowerCase()
+    );
+
+    if(existingUser){
+      return{
+        ok:false,
+        message:"An account with this email already exists.",
+      };
+    }
+
+    const newUser: User = {
+      id: `U${String(users.length + 1).padStart(3,"0")}`,
+      name,
+      email,
+      phone,
+      password,
+      role: "User",
+      status:"Active",
+      avatar:"placeholder.png",
+    };
+
+    setUsers((prev) => [...prev, newUser]);
+    return {
+      ok:true,
+      message:"Account created successfully.",
+    };
+  };
 
   const login = (
     email:string,
@@ -238,6 +282,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         currentUserId,
         setCurrentUserId,
         isAuthenticated,
+        register,
         login,
         logout,
         users,
