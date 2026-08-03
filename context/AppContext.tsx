@@ -92,11 +92,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     email:string,
     password: string
   ): ActionResponse =>{
+    console.log("Login:", email, password);
     const user = users.find(
       (u) =>
         u.email === email &&
         u.password === password
     );
+    
+    console.log("Matched user:", user);
 
     if(!user){
       return{

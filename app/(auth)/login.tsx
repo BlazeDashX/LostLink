@@ -1,4 +1,5 @@
-import { View, StyleSheet, Text, Pressable } from "react-native";
+import React, { useState } from "react";
+import { Alert ,View, StyleSheet, Text, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
@@ -7,7 +8,48 @@ import FormField from "@/components/FormField";
 import PrimaryButton from "@/components/PrimaryButton";
 import { COLORS } from "@/constants/colors";
 
+import { useApp } from "@/context/AppContext";
+
 export default function LoginScreen() {
+
+  const { login, users } = useApp();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = ()=>{
+    if(!email.trim() || !password.trim()){
+      Alert.alert(
+        "Missing Information",
+        "Please enter both email and password."
+      );
+      return;
+    }
+
+    const result = login(email.trim(), password);
+    
+    if (!result.ok){
+      console.log(result.message);
+      alert(result.message);
+      return;
+    }
+
+    const currentUser = users.find(
+      (user)=>user.email === email.trim()
+    );
+
+    if(!currentUser){
+      Alert.alert("Error", "User not found");
+      return;
+    }
+
+    if (currentUser.role === "Admin"){
+      router.replace("/(admin)");
+    }else{
+      router.replace("/(tab)/home");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -25,12 +67,16 @@ export default function LoginScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
+          value={email}
+          onChangeText={setEmail}
         />
 
         <FormField
           label="Password"
           placeholder="Enter your password"
           showPasswordToggle
+          value={password}
+          onChangeText={setPassword}
         />
 
         <View style={styles.forgotPasswordContainer}>
@@ -45,6 +91,7 @@ export default function LoginScreen() {
 
         <PrimaryButton
           title="Login"
+          onPress={handleLogin}
         />
 
         <View style={styles.footer}>
