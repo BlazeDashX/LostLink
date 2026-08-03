@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
 import usersData from "@/data/users.json";
 import itemsData from "@/data/items.json";
@@ -28,7 +28,10 @@ interface ActionResponse {
 }
 
 interface AppContextType {
-  currentUserId: string;
+  currentUserId: string | null;
+  setCurrentUserId: React.Dispatch<
+    React.SetStateAction<string | null>
+  >;
 
   users: User[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
@@ -54,12 +57,22 @@ interface AppContextType {
   rejectClaim: (claimId: string) => ActionResponse;
   getClaimById: (claimId: string) => Claim | undefined;
   getClaimsByItem: (itemId: string) => Claim[];
+
+  //Authentication
+  isAuthenticated: boolean;
+
+  login:(
+    email: string,
+    password: string
+  )=> ActionResponse;
+
+  logout: ()=> void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentUserId] = useState("U001");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [users, setUsers] = useState<User[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -75,7 +88,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setNotifications(notificationsData as Notification[]);
   }, []);
 
+  const login = (
+    email:string,
+    password: string
+  ): ActionResponse =>{
+    const user = users.find(
+      (u) =>
+        u.email === email &&
+        u.password === password
+    );
+
+    if(!user){
+      return{
+        ok:false,
+        message: "Invalid email or password.",
+      };
+    }
+
+    if(user.status === "Suspended"){
+      return {
+        ok:false,
+        message: "Your account has been suspended.",
+      };
+    }
+
+    setCurrentUserId(user.id);
+
+    return {
+      ok:true,
+      message: "Login successful."
+    };
+  };
+
+  const logout = ()=>{
+    setCurrentUserId(null);
+  };
+
+  const isAuthenticated = currentUserId !== null;
+
   const submitClaim = (data: SubmitClaimData): ActionResponse => {
+    
+    if (!currentUserId) {
+      return {
+        ok: false,
+        message: "Please login first.",
+      };
+    }
+
     const item = items.find((i) => i.id === data.itemId);
     if (!item) return { ok: false, message: "Item not found." };
     if (item.reporterId === currentUserId) {
@@ -146,6 +205,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addItem = (data: Omit<Item, "id" | "reporterId" | "status" | "createdAt">): ActionResponse => {
+
+    if (!currentUserId) {
+      return {
+        ok: false,
+        message: "Please login first.",
+      };
+    }
+
     const newItem: Item = {
       id: `I${String(items.length + 1).padStart(3, "0")}`,
       ...data,
@@ -166,6 +233,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider
       value={{
         currentUserId,
+        setCurrentUserId,
+        isAuthenticated,
+        login,
+        logout,
         users,
         setUsers,
         items,
