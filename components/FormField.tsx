@@ -38,7 +38,7 @@ export default function FormField({
                     style={{paddingLeft:8}}>
 
                         <Ionicons
-                            name = {isPasswordVisible ? "eye-off-outline" : "ear-outline"}
+                            name = {isPasswordVisible ? "eye-off-outline" : "eye-outline"}
                             size={22}
                             color={COLORS.textSecondary}
                         />

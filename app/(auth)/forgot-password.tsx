@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   Text,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -18,32 +17,35 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
 
   const handleReset = () => {
+
     if (!email.trim()) {
-      Alert.alert("Error", "Please enter your email.");
+      window.alert("Please enter your email.");
       return;
     }
 
     const emailRegex = /\S+@\S+\.\S+/;
 
-    if (!emailRegex.test(email)) {
-      Alert.alert("Error", "Please enter a valid email.");
+    if (!emailRegex.test(email.trim())) {
+      window.alert("Please enter a valid email.");
       return;
     }
 
-    users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
+    const user = users.find(
+      (u) =>
+        u.email.toLowerCase() ===
+        email.trim().toLowerCase()
     );
 
-    Alert.alert(
-      "Reset Request",
-      "If an account exists, reset instruction has been simulated.",
-      [
-        {
-          text: "OK",
-          onPress: () => router.replace("/login"),
-        },
-      ]
+    if (!user) {
+      window.alert("No account found with this email.");
+      return;
+    }
+
+    window.alert(
+      "Password reset request simulated successfully."
     );
+
+    router.replace("/(auth)/login");
   };
 
   return (

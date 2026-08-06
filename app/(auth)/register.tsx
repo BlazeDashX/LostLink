@@ -1,12 +1,55 @@
-import { View,Pressable, StyleSheet, Text, ScrollView } from "react-native";
+import React, { useState } from "react";
+import { Alert,View,Pressable, StyleSheet, Text, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/colors";
 import FormField from "@/components/FormField";
 import PrimaryButton from "@/components/PrimaryButton";
+import { useApp } from "@/context/AppContext";
 
 export default function RegisterScreen() {
+
+  const { register } = useApp();
+
+  const[name, setName] = useState("");
+  const[email, setEmail] = useState("");
+  const[phone,setPhone] = useState("");
+  const[password, setPassword] = useState("");
+  const[confirmPassword, setConfirmPassword] = useState("");
+
+  const handleRegister = () => {
+    if (
+      !name.trim()||
+      !email.trim()||
+      !phone.trim()||
+      !password||
+      !confirmPassword
+    ){
+      window.alert("Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword){
+      window.alert("Password do not match");
+      return;
+    }
+
+    const result = register(
+      name.trim(),
+      email.trim(),
+      phone.trim(),
+      password
+    );
+
+    if(!result.ok){
+      window.alert(result.message);
+      return;
+    }
+    window.alert(result.message);
+    router.replace("/(auth)/login");
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -36,6 +79,8 @@ export default function RegisterScreen() {
         <FormField
           label="Full Name"
           placeholder="Enter your full name"
+          value={name}
+          onChangeText={setName}
         />
 
         <FormField
@@ -44,28 +89,37 @@ export default function RegisterScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
+          value={email}
+          onChangeText={setEmail}
         />
 
         <FormField
           label="Phone Number"
           placeholder="Enter your phone number"
           keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
         />
 
         <FormField
           label="Password"
           placeholder="Create a password"
           showPasswordToggle
+          value={password}
+          onChangeText={setPassword}
         />
 
         <FormField
           label="Confirm Password"
           placeholder="Confirm your password"
           showPasswordToggle
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
         />
 
         <PrimaryButton
           title="Create Account"
+          onPress={handleRegister}
         />
 
         <Text style={styles.noteText}>
