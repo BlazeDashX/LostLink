@@ -12,13 +12,13 @@ import { useApp } from "@/context/AppContext";
 
 export default function LoginScreen() {
 
-  const { login, users } = useApp();
+  const { login } = useApp();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = ()=>{
-    if(!email.trim() || !password.trim()){
+  const handleLogin = () => {
+    if (!email.trim() || !password.trim()) {
       Alert.alert(
         "Missing Information",
         "Please enter both email and password."
@@ -26,26 +26,16 @@ export default function LoginScreen() {
       return;
     }
 
-    const result = login(email.trim(), password);
+    const result = login(email, password);
     
-    if (!result.ok){
-      console.log(result.message);
-      alert(result.message);
+    if (!result.ok || !result.user) {
+      Alert.alert("Login Failed", result.message);
       return;
     }
 
-    const currentUser = users.find(
-      (user)=>user.email === email.trim()
-    );
-
-    if(!currentUser){
-      Alert.alert("Error", "User not found");
-      return;
-    }
-
-    if (currentUser.role === "Admin"){
+    if (result.user.role === "Admin") {
       router.replace("/(admin)");
-    }else{
+    } else {
       router.replace("/(tab)/home");
     }
   };
