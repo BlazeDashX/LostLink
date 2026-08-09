@@ -83,34 +83,40 @@ export default function MyActivityScreen() {
   }, [myReports, myClaims, items]);
 
   function renderItemRow(item: Item) {
-    // SRS 13.15.6 — edit action disabled after reservation/delivery
     const editable = item.status === "Active";
+
     return (
-      <TouchableOpacity
-        key={item.id}
-        style={styles.card}
-        onPress={() => router.push({ pathname: "../item-details", params: { itemId: item.id } })}
-      >
-        <View style={styles.cardThumb}>
-          <Text style={styles.cardThumbText}>{item.title.slice(0, 3).toUpperCase()}</Text>
-        </View>
-        <View style={styles.cardBody}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardSubtitle}>
-            {item.type} · {item.status} · {formatShortDate(item.reportDate)}
-          </Text>
-          <View style={[styles.progressBar, { backgroundColor: statusColor(item.status) }]} />
-        </View>
+      <View style={styles.card}>
         <TouchableOpacity
+          activeOpacity={0.75}
+          style={styles.cardMain}
+          onPress={() =>
+            router.push({ pathname: "/report/item/[id]", params: { id: item.id } } as any)
+          }
+        >
+          <View style={styles.cardThumb}>
+            <Text style={styles.cardThumbText}>{item.title.slice(0, 3).toUpperCase()}</Text>
+          </View>
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <Text style={styles.cardSubtitle}>
+              {item.type} · {item.status} · {formatShortDate(item.reportDate)}
+            </Text>
+            <View style={[styles.progressBar, { backgroundColor: statusColor(item.status) }]} />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          accessibilityRole="button"
           onPress={() =>
             editable
-              ? router.push({ pathname: "../report-item", params: { itemId: item.id, mode: "edit" } })
-              : router.push({ pathname: "../item-details", params: { itemId: item.id } })
+              ? router.push({ pathname: "/report", params: { itemId: item.id, mode: "edit" } } as any)
+              : router.push({ pathname: "/report/item/[id]", params: { id: item.id } } as any)
           }
         >
           <Text style={styles.cardAction}>{editable ? "Edit" : "View"}</Text>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </View>
     );
   }
 
@@ -121,7 +127,7 @@ export default function MyActivityScreen() {
       <TouchableOpacity
         key={claim.id}
         style={styles.card}
-        onPress={() => router.push({ pathname: "../claim-review", params: { claimId: claim.id } })}
+        onPress={() => router.push({ pathname: "/report/claim/review", params: { claimId: claim.id } })}
       >
         <View style={styles.cardThumb}>
           <Text style={styles.cardThumbText}>{item.title.slice(0, 3).toUpperCase()}</Text>
@@ -222,6 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cardThumbText: { fontSize: 12, fontWeight: "700", color: COLORS.primaryDark },
+  cardMain: { alignItems: "center", flex: 1, flexDirection: "row", gap: 12 },
   cardBody: { flex: 1 },
   cardTitle: { fontSize: 14, fontWeight: "700", color: COLORS.text },
   cardSubtitle: { fontSize: 12, color: COLORS.subtext, marginTop: 2, marginBottom: 6 },

@@ -215,7 +215,7 @@ export default function AdminManagementScreen() {
               // SRS 13.17.7 — row -> related claim review
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => router.push({ pathname: "/(admin)/claim-review" as any, params: { claimId: claim.id } })}
+                onPress={() => router.push({ pathname: "/report/claim/review" as any, params: { claimId: claim.id } })}
               >
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{claim.id.replace(/[^0-9]/g, "").slice(-2)}</Text>

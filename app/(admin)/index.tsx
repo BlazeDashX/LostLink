@@ -54,7 +54,7 @@ export default function AdminDashboardScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
         <Text style={styles.header}>Admin Dashboard</Text>
-        <TouchableOpacity style={styles.bellWrap} onPress={() => router.push("../notifications")}>
+        <TouchableOpacity style={styles.bellWrap} onPress={() => router.push("/home/notifications")}>
           <Text style={styles.bellIcon}>⟳</Text>
           {unreadCount > 0 && <View style={styles.bellDot} />}
         </TouchableOpacity>
@@ -79,7 +79,7 @@ export default function AdminDashboardScreen() {
             style={styles.attentionCard}
             onPress={() =>
               router.push({
-                pathname: "/(admin)/claim-review" as any,
+                pathname: "/report/claim/review" as any,
                 params: { claimId: claim.id },
               })
             }
