@@ -53,7 +53,7 @@ export default function ProfileScreen() {
             icon="document-text-outline"
             title="My Activity"
             subtitle="Reports, claims and solved items"
-            onPress={() => comingSoon("My Activity")}
+            onPress={() => router.push("/my-activity" as any)}
           />
 
           <ProfileMenuRow

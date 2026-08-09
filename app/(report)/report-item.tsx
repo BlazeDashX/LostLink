@@ -153,7 +153,7 @@ export default function ReportItemScreen() {
       {
         text: "OK",
         onPress: () =>
-          router.push({ pathname: "../item-details", params: { itemId: newItem.id } }),
+          router.push({ pathname: "/report/item/[id]", params: { id: newItem.id } } as any),
       },
     ]);
   }
