@@ -56,7 +56,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 14,
   },
-  badgeSmall: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  text: { fontSize: 12, fontWeight: "700" },
+  badgeSmall: { 
+    paddingHorizontal: 8,
+     paddingVertical: 3,
+      borderRadius: 10 },
+
+  text: { fontSize: 12,
+     fontWeight: "700" },
+     
   textSmall: { fontSize: 10 },
 });

@@ -269,11 +269,28 @@ function ErrorText({ text }: { text?: string }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FFFFFF" },
-  content: { padding: 20, paddingBottom: 48 },
-  header: { fontSize: 22, fontWeight: "700", color: COLORS.text, marginBottom: 16 },
-  sectionLabel: { fontSize: 13, fontWeight: "600", color: COLORS.subtext, marginBottom: 8 },
-  fieldLabel: { fontSize: 13, fontWeight: "600", color: COLORS.text, marginTop: 20, marginBottom: 6 },
+  screen: { flex: 1,
+     backgroundColor: "#FFFFFF" },
+
+  content: { padding: 20, 
+    paddingBottom: 48 },
+
+  header: { fontSize: 22, 
+    fontWeight: "700", 
+    color: COLORS.text,
+     marginBottom: 16 },
+
+  sectionLabel: { fontSize: 13,
+     fontWeight: "600",
+      color: COLORS.subtext,
+      marginBottom: 8 },
+
+  fieldLabel: { fontSize: 13, 
+    fontWeight: "600", 
+    color: COLORS.text,
+     marginTop: 20, 
+     marginBottom: 6 },
+
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -285,9 +302,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   inputError: { borderColor: COLORS.danger },
-  textArea: { minHeight: 90, textAlignVertical: "top" },
-  errorText: { fontSize: 12, color: COLORS.danger, marginTop: 4 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap" },
+
+  textArea: { minHeight: 90, 
+    textAlignVertical: "top" },
+
+  errorText: { fontSize: 12,
+     color: COLORS.danger,
+      marginTop: 4 },
+
+  chipRow: { flexDirection: "row",
+     flexWrap: "wrap" },
+
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -297,8 +322,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  chipText: { fontSize: 13, color: COLORS.text, fontWeight: "500" },
+  chipActive: { backgroundColor: COLORS.primary,
+     borderColor: COLORS.primary },
+
+  chipText: { fontSize: 13, 
+    color: COLORS.text,
+     fontWeight: "500" },
+
   chipTextActive: { color: "#FFFFFF" },
   photoRow: {
     flexDirection: "row",
@@ -309,9 +339,17 @@ const styles = StyleSheet.create({
     marginTop: 20,
     gap: 12,
   },
-  photoPlus: { fontSize: 20, color: COLORS.primary, fontWeight: "700" },
-  photoTitle: { fontSize: 14, fontWeight: "600", color: COLORS.primaryDark },
-  photoSubtitle: { fontSize: 12, color: COLORS.subtext },
+  photoPlus: { 
+    fontSize: 20, color: COLORS.primary,
+    fontWeight: "700" },
+
+  photoTitle: { fontSize: 14,
+     fontWeight: "600", 
+     color: COLORS.primaryDark },
+
+  photoSubtitle: { fontSize: 12,
+     color: COLORS.subtext },
+     
   publishButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
@@ -320,5 +358,9 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   publishButtonDisabled: { opacity: 0.6 },
-  publishButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+
+  publishButtonText: { 
+    color: "#FFFFFF", 
+    fontSize: 16,
+    fontWeight: "700" },
 });

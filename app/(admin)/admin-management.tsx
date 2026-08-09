@@ -274,14 +274,51 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 12,
   },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryLight, alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 12, fontWeight: "700", color: COLORS.primaryDark },
+  avatar: { 
+    width: 40, 
+    height: 40,
+     borderRadius: 20,
+      backgroundColor: COLORS.primaryLight, 
+      alignItems: "center",
+       justifyContent: "center" },
+
+  avatarText: { fontSize: 12, 
+    fontWeight: "700", 
+    color: COLORS.primaryDark },
+
   rowBody: { flex: 1 },
-  rowTitle: { fontSize: 14, fontWeight: "700", color: COLORS.text },
-  rowSubtitle: { fontSize: 12, color: COLORS.subtext, marginTop: 2 },
-  badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
-  badgeText: { fontSize: 11, fontWeight: "700" },
-  footerNotice: { backgroundColor: COLORS.amberLight, marginHorizontal: 20, marginBottom: 20, borderRadius: 14, padding: 16 },
-  footerNoticeTitle: { fontSize: 12, fontWeight: "700", color: "#92400E" },
-  footerNoticeSubtitle: { fontSize: 12, color: "#92400E", marginTop: 4 },
+
+  rowTitle: { fontSize: 14,
+     fontWeight: "700", 
+     color: COLORS.text },
+
+  rowSubtitle: { 
+    fontSize: 12, 
+    color: COLORS.subtext, 
+    marginTop: 2 },
+
+  badge: { 
+    paddingHorizontal: 10, 
+    paddingVertical: 5, 
+    borderRadius: 12 },
+
+  badgeText: { 
+    fontSize: 11,
+     fontWeight: "700" },
+
+  footerNotice: { backgroundColor: COLORS.amberLight, 
+    marginHorizontal: 20,
+    marginBottom: 20, 
+    borderRadius: 14, 
+    padding: 16 },
+
+  footerNoticeTitle: { 
+    fontSize: 12, 
+    fontWeight: "700", 
+    color: "#92400E" },
+
+  footerNoticeSubtitle: { 
+    fontSize: 12,
+     color: "#92400E", 
+     marginTop: 4 },
 });

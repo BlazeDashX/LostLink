@@ -59,9 +59,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  thumbText: { fontSize: 12, fontWeight: "700", color: "#1E3A8A" },
+  thumbText: { fontSize: 12,
+     fontWeight: "700", 
+     color: "#1E3A8A" },
+
   info: { flex: 1, gap: 4 },
-  title: { fontSize: 14, fontWeight: "700", color: "#0F172A" },
-  location: { fontSize: 12, color: "#64748B" },
-  action: { fontSize: 13, fontWeight: "600", color: "#2563EB" },
+
+  title: { fontSize: 14, 
+    fontWeight: "700",
+     color: "#0F172A" },
+
+  location: { fontSize: 12,
+     color: "#64748B" },
+
+  action: { fontSize: 13,
+     fontWeight: "600",
+      color: "#2563EB" },
+      
 });

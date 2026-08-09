@@ -121,19 +121,64 @@ function MetricCard({ label, value, bg, color }: { label: string; value: number;
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FFFFFF" },
-  content: { padding: 20, paddingBottom: 48 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  header: { fontSize: 22, fontWeight: "700", color: COLORS.text },
+  screen: { 
+    flex: 1, 
+    backgroundColor: "#FFFFFF" },
+
+  content: { 
+    padding: 20, 
+    paddingBottom: 48 },
+
+  headerRow: { 
+    flexDirection: "row",
+     justifyContent: "space-between", 
+     alignItems: "center", 
+     marginBottom: 20 },
+
+  header: { fontSize: 22, 
+    fontWeight: "700", 
+    color: COLORS.text },
+
   bellWrap: { padding: 6 },
-  bellIcon: { fontSize: 18, color: COLORS.text },
-  bellDot: { position: "absolute", top: 4, right: 4, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.red },
-  sectionTitle: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginTop: 20, marginBottom: 12 },
-  metricsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
-  metricCard: { width: "47%", borderRadius: 14, padding: 16, marginBottom: 12 },
-  metricLabel: { fontSize: 12, fontWeight: "600" },
-  metricValue: { fontSize: 26, fontWeight: "800", marginTop: 6 },
-  emptyText: { fontSize: 13, color: COLORS.subtext },
+
+  bellIcon: { fontSize: 18, 
+    color: COLORS.text },
+
+  bellDot: { position: "absolute", 
+    top: 4,
+     right: 4, 
+     width: 8,
+      height: 8, 
+      borderRadius: 4,
+       backgroundColor: COLORS.red },
+
+  sectionTitle: { 
+    fontSize: 15,
+     fontWeight: "700", 
+     color: COLORS.text, 
+     marginTop: 20,
+      marginBottom: 12 },
+
+  metricsGrid: { flexDirection: "row",
+     flexWrap: "wrap", 
+     justifyContent: "space-between" },
+
+  metricCard: { width: "47%", 
+    borderRadius: 14, 
+    padding: 16, 
+    marginBottom: 12 },
+
+  metricLabel: {
+    fontSize: 12, 
+    fontWeight: "600" },
+
+  metricValue: { fontSize: 26, 
+    fontWeight: "800",
+    marginTop: 6 },
+
+  emptyText: { fontSize: 13, 
+    color: COLORS.subtext },
+
   attentionCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -152,13 +197,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  attentionThumbText: { fontSize: 11, fontWeight: "700", color: COLORS.primaryDark },
+  attentionThumbText: { fontSize: 11, 
+    fontWeight: "700", 
+    color: COLORS.primaryDark },
+
   attentionBody: { flex: 1 },
-  attentionTitle: { fontSize: 14, fontWeight: "700", color: COLORS.text },
-  attentionSubtitle: { fontSize: 12, color: COLORS.subtext, marginTop: 2, marginBottom: 6 },
-  attentionBar: { height: 6, borderRadius: 3, width: "50%", backgroundColor: COLORS.amber },
-  openLink: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
-  adminButton: { backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 16, alignItems: "center" },
-  adminButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
-  footerText: { textAlign: "center", color: COLORS.subtext, fontSize: 12, marginTop: 40 },
+
+  attentionTitle: { fontSize: 14, 
+    fontWeight: "700", 
+    color: COLORS.text },
+
+  attentionSubtitle: { 
+    fontSize: 12, 
+    color: COLORS.subtext,
+     marginTop: 2, 
+     marginBottom: 6 },
+
+  attentionBar: { height: 6,
+     borderRadius: 3,
+      width: "50%",
+       backgroundColor: COLORS.amber },
+
+  openLink: { fontSize: 13, 
+    fontWeight: "600",
+     color: COLORS.primary },
+
+  adminButton: { backgroundColor: COLORS.primary, 
+    borderRadius: 12,
+     paddingVertical: 16, 
+     alignItems: "center" },
+
+  adminButtonText: { 
+    color: "#FFFFFF",
+     fontSize: 15,
+      fontWeight: "700" },
+
+  footerText: { textAlign: "center", 
+    color: COLORS.subtext,
+    fontSize: 12, 
+    marginTop: 40 },
+    
 });

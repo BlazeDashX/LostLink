@@ -199,16 +199,47 @@ export default function MyActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FFFFFF" },
-  headerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 16, gap: 12 },
-  backArrow: { fontSize: 24, color: COLORS.text },
-  header: { fontSize: 20, fontWeight: "700", color: COLORS.text },
-  tabRow: { flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingVertical: 14 },
-  tabButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
-  tabButtonActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  tabButtonText: { fontSize: 13, fontWeight: "600", color: COLORS.text },
+  screen: { 
+    flex: 1, 
+    backgroundColor: "#FFFFFF" },
+
+  headerRow: { flexDirection: "row",
+     alignItems: "center", 
+     paddingHorizontal: 20,
+      paddingTop: 16, 
+      gap: 12 },
+
+  backArrow: { fontSize: 24, 
+    color: COLORS.text },
+
+  header: { 
+    fontSize: 20,
+     fontWeight: "700",
+      color: COLORS.text },
+
+  tabRow: { flexDirection: "row", 
+    gap: 8,
+     paddingHorizontal: 20,
+      paddingVertical: 14 },
+
+  tabButton: { paddingHorizontal: 16,
+     paddingVertical: 8, 
+     borderRadius: 20, 
+     borderWidth: 1, 
+     borderColor: COLORS.border },
+
+  tabButtonActive: { backgroundColor: COLORS.primary,
+     borderColor: COLORS.primary },
+
+  tabButtonText: { fontSize: 13,
+    fontWeight: "600", 
+    color: COLORS.text },
+
   tabButtonTextActive: { color: "#FFFFFF" },
-  listContent: { paddingHorizontal: 20, paddingBottom: 12 },
+
+  listContent: { paddingHorizontal: 20,
+     paddingBottom: 12 },
+
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -227,16 +258,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cardThumbText: { fontSize: 12, fontWeight: "700", color: COLORS.primaryDark },
-  cardMain: { alignItems: "center", flex: 1, flexDirection: "row", gap: 12 },
+  cardThumbText: { fontSize: 12, 
+    fontWeight: "700", 
+    color: COLORS.primaryDark },
+
+  cardMain: { alignItems: "center", 
+    flex: 1,
+     flexDirection: "row",
+     gap: 12 },
+
   cardBody: { flex: 1 },
-  cardTitle: { fontSize: 14, fontWeight: "700", color: COLORS.text },
-  cardSubtitle: { fontSize: 12, color: COLORS.subtext, marginTop: 2, marginBottom: 6 },
-  progressBar: { height: 6, borderRadius: 3, width: "60%" },
-  cardAction: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
-  emptyState: { alignItems: "center", paddingVertical: 48 },
-  emptyTitle: { fontSize: 15, fontWeight: "600", color: COLORS.text },
-  emptySubtitle: { fontSize: 13, color: COLORS.subtext, marginTop: 4, textAlign: "center", paddingHorizontal: 32 },
+
+  cardTitle: { fontSize: 14,
+     fontWeight: "700", 
+     color: COLORS.text },
+
+  cardSubtitle: { fontSize: 12,
+     color: COLORS.subtext,
+      marginTop: 2,
+      marginBottom: 6 },
+
+  progressBar: { height: 6,
+     borderRadius: 3,
+      width: "60%" },
+
+  cardAction: { fontSize: 13, 
+    fontWeight: "600", 
+    color: COLORS.primary },
+
+  emptyState: { alignItems: "center", 
+    paddingVertical: 48 },
+
+  emptyTitle: { fontSize: 15,
+    fontWeight: "600", 
+    color: COLORS.text },
+
+  emptySubtitle: { fontSize: 13, 
+    color: COLORS.subtext, 
+    marginTop: 4, 
+    textAlign: "center", 
+    paddingHorizontal: 32 },
+
   summaryBar: {
     backgroundColor: COLORS.primaryLight,
     marginHorizontal: 20,
@@ -244,6 +306,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
   },
-  summaryLabel: { fontSize: 12, fontWeight: "700", color: COLORS.primaryDark },
-  summaryText: { fontSize: 13, color: COLORS.text, marginTop: 4 },
+  summaryLabel: { fontSize: 12,
+     fontWeight: "700",
+      color: COLORS.primaryDark },
+
+  summaryText: { fontSize: 13,
+     color: COLORS.text,
+     marginTop: 4 },
+     
 });
