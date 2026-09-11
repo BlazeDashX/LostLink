@@ -1,37 +1,208 @@
 import React, { useState } from "react";
-import { Alert,View,Pressable, StyleSheet, Text, ScrollView } from "react-native";
+import {
+  View,
+  Pressable,
+  StyleSheet,
+  Text,
+  ScrollView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+
 import { COLORS } from "@/constants/colors";
 import FormField from "@/components/FormField";
 import PrimaryButton from "@/components/PrimaryButton";
 import { useApp } from "@/context/AppContext";
 
-export default function RegisterScreen() {
+interface FormErrors {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+}
 
+interface TouchedFields {
+  name: boolean;
+  email: boolean;
+  phone: boolean;
+  password: boolean;
+  confirmPassword: boolean;
+}
+
+export default function RegisterScreen() {
   const { register } = useApp();
 
-  const[name, setName] = useState("");
-  const[email, setEmail] = useState("");
-  const[phone,setPhone] = useState("");
-  const[password, setPassword] = useState("");
-  const[confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleRegister = () => {
-    if (
-      !name.trim()||
-      !email.trim()||
-      !phone.trim()||
-      !password||
-      !confirmPassword
-    ){
-      window.alert("Please fill in all fields");
-      return;
+  const [errors, setErrors] = useState<FormErrors>({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const [touched, setTouched] = useState<TouchedFields>({
+    name: false,
+    email: false,
+    phone: false,
+    password: false,
+    confirmPassword: false,
+  });
+
+  const validateField = (
+    field: keyof FormErrors,
+    value: string
+  ): string => {
+    switch (field) {
+      case "name":
+        if (!value.trim()) {
+          return "Full name is required.";
+        }
+
+        if (value.trim().length < 3) {
+          return "Name must be at least 3 characters.";
+        }
+
+        return "";
+
+      case "email":
+        if (!value.trim()) {
+          return "Email address is required.";
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+          return "Please enter a valid email address.";
+        }
+
+        return "";
+
+      case "phone":
+        if (!value.trim()) {
+          return "Phone number is required.";
+        }
+
+        return "";
+
+      case "password":
+        if (!value) {
+          return "Password is required.";
+        }
+
+        if (value.length < 6) {
+          return "Password must be at least 6 characters.";
+        }
+
+        return "";
+
+      case "confirmPassword":
+        if (!value) {
+          return "Please confirm your password.";
+        }
+
+        if (value !== password) {
+          return "Passwords do not match.";
+        }
+
+        return "";
+
+      default:
+        return "";
+    }
+  };
+
+  const handleFieldChange = (
+    field: keyof FormErrors,
+    value: string
+  ) => {
+    // Update the actual field value
+    switch (field) {
+      case "name":
+        setName(value);
+        break;
+
+      case "email":
+        setEmail(value);
+        break;
+
+      case "phone":
+        setPhone(value);
+        break;
+
+      case "password":
+        setPassword(value);
+        break;
+
+      case "confirmPassword":
+        setConfirmPassword(value);
+        break;
     }
 
-    if (password !== confirmPassword){
-      window.alert("Password do not match");
+    // Mark the field as touched
+    setTouched((prev) => ({
+      ...prev,
+      [field]: true,
+    }));
+
+    // Validate the field
+    const error = validateField(field, value);
+
+    setErrors((prev) => ({
+      ...prev,
+      [field]: error,
+    }));
+
+    // If password changes, confirm password may also become invalid
+    if (field === "password" && touched.confirmPassword) {
+      setErrors((prev) => ({
+        ...prev,
+        password: error,
+        confirmPassword:
+          confirmPassword && confirmPassword !== value
+            ? "Passwords do not match."
+            : "",
+      }));
+    }
+  };
+
+  const validateAllFields = (): boolean => {
+    const newErrors: FormErrors = {
+      name: validateField("name", name),
+      email: validateField("email", email),
+      phone: validateField("phone", phone),
+      password: validateField("password", password),
+      confirmPassword: validateField(
+        "confirmPassword",
+        confirmPassword
+      ),
+    };
+
+    setErrors(newErrors);
+
+    setTouched({
+      name: true,
+      email: true,
+      phone: true,
+      password: true,
+      confirmPassword: true,
+    });
+
+    return !Object.values(newErrors).some(
+      (error) => error !== ""
+    );
+  };
+
+  const handleRegister = () => {
+    // Validate all fields before registration
+    const isValid = validateAllFields();
+
+    if (!isValid) {
       return;
     }
 
@@ -42,10 +213,13 @@ export default function RegisterScreen() {
       password
     );
 
-    if(!result.ok){
+    // Duplicate email or another registration error
+    if (!result.ok) {
       window.alert(result.message);
       return;
     }
+
+    // Registration successful
     window.alert(result.message);
     router.replace("/(auth)/login");
   };
@@ -80,7 +254,10 @@ export default function RegisterScreen() {
           label="Full Name"
           placeholder="Enter your full name"
           value={name}
-          onChangeText={setName}
+          onChangeText={(value) =>
+            handleFieldChange("name", value)
+          }
+          error={touched.name ? errors.name : ""}
         />
 
         <FormField
@@ -90,7 +267,10 @@ export default function RegisterScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) =>
+            handleFieldChange("email", value)
+          }
+          error={touched.email ? errors.email : ""}
         />
 
         <FormField
@@ -98,7 +278,10 @@ export default function RegisterScreen() {
           placeholder="Enter your phone number"
           keyboardType="phone-pad"
           value={phone}
-          onChangeText={setPhone}
+          onChangeText={(value) =>
+            handleFieldChange("phone", value)
+          }
+          error={touched.phone ? errors.phone : ""}
         />
 
         <FormField
@@ -106,7 +289,10 @@ export default function RegisterScreen() {
           placeholder="Create a password"
           showPasswordToggle
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(value) =>
+            handleFieldChange("password", value)
+          }
+          error={touched.password ? errors.password : ""}
         />
 
         <FormField
@@ -114,7 +300,14 @@ export default function RegisterScreen() {
           placeholder="Confirm your password"
           showPasswordToggle
           value={confirmPassword}
-          onChangeText={setConfirmPassword}
+          onChangeText={(value) =>
+            handleFieldChange("confirmPassword", value)
+          }
+          error={
+            touched.confirmPassword
+              ? errors.confirmPassword
+              : ""
+          }
         />
 
         <PrimaryButton
@@ -131,10 +324,14 @@ export default function RegisterScreen() {
             Already have an account?
           </Text>
 
-          <Pressable onPress={() => router.replace("/(auth)/login")}>
-          <Text style={styles.loginText}>
-            Login
-          </Text>
+          <Pressable
+            onPress={() =>
+              router.replace("/(auth)/login")
+            }
+          >
+            <Text style={styles.loginText}>
+              Login
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -207,7 +404,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
 
-headerTitle: {
+  headerTitle: {
     fontSize: 22,
     fontWeight: "700",
     color: COLORS.textPrimary,

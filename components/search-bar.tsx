@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import { COLORS, SPACING } from "@/constants/theme";
 
@@ -14,12 +14,25 @@ export default function SearchBar({
   onChangeText,
   placeholder = "Search",
 }: SearchBarProps) {
+  const handleSearch = () => {
+    if (!value.trim()) {
+      alert("Search field cannot be empty");
+      return;
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Ionicons color={COLORS.textMuted} name="search-outline" size={20} />
+      <Ionicons
+        color={COLORS.textMuted}
+        name="search-outline"
+        size={20}
+      />
+
       <TextInput
         autoCapitalize="none"
         onChangeText={onChangeText}
+        onSubmitEditing={handleSearch}
         placeholder={placeholder}
         placeholderTextColor={COLORS.textMuted}
         style={styles.input}
@@ -42,6 +55,7 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
   },
+
   input: {
     color: COLORS.text,
     flex: 1,
