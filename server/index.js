@@ -81,6 +81,22 @@ app.post("/api/auth/login", (req, res) => {
   });
 });
 
+app.post("/api/auth/forgot-password", (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({
+      message: "Email is required",
+    });
+  }
+
+  const user = findUserByEmail(email);
+
+  return res.status(200).json({
+    message:
+      "If an account exists with this email, a password reset request has been created.",
+  });
+});
 
 app.listen(3000, () => {
   console.log("LostLink server is running on port 3000");
