@@ -273,6 +273,9 @@ export default function RegisterScreen() {
       >
         <View style={styles.header}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            accessibilityHint="Returns to the previous screen"
             onPress={() => router.back()}
           >
             <Ionicons
@@ -374,7 +377,10 @@ export default function RegisterScreen() {
           </Text>
 
           <Pressable
-            onPress={() =>
+              accessibilityRole="button"
+              accessibilityLabel="Login"
+              accessibilityHint="Opens the login screen"
+              onPress={() =>
               router.replace("/(auth)/login")
             }
           >

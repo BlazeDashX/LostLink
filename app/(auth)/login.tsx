@@ -98,6 +98,9 @@ export default function LoginScreen() {
 
         <View style={styles.forgotPasswordContainer}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Forgot Password"
+            accessibilityHint="Opens the password reset screen"
             onPress={() =>
               router.push(
                 "/(auth)/forgot-password"
@@ -122,6 +125,9 @@ export default function LoginScreen() {
           </Text>
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Register"
+            accessibilityHint="Opens the registration screen"
             onPress={() =>
               router.push("/(auth)/register")
             }

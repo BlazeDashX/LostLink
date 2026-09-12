@@ -10,15 +10,14 @@ import {
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { router } from "expo-router";
-
 import { Ionicons } from "@expo/vector-icons";
 
 import FormField from "@/components/FormField";
-
 import PrimaryButton from "@/components/PrimaryButton";
 
 import { COLORS } from "@/constants/colors";
+
+import { router } from "expo-router";
 
 import { api } from "@/services/api";
 
@@ -63,7 +62,8 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    const emailRegex = /\S+@\S+\.\S+/;
+    const emailRegex =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailRegex.test(email.trim())) {
       showAlert(
