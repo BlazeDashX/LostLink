@@ -49,6 +49,39 @@ app.post("/api/auth/register", (req, res) => {
   });
 });
 
+
+app.post("/api/auth/login", (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      message: "Email and password are required",
+    });
+  }
+
+  const user = findUserByEmail(email);
+
+  if (!user || user.password !== password) {
+    return res.status(401).json({
+      message: "Invalid email or password",
+    });
+  }
+
+  if (user.status === "Suspended") {
+    return res.status(403).json({
+      message: "Your account has been suspended",
+    });
+  }
+
+  const { password: _, ...safeUser } = user;
+
+  res.status(200).json({
+    message: "Login successful",
+    user: safeUser,
+  });
+});
+
+
 app.listen(3000, () => {
   console.log("LostLink server is running on port 3000");
 });
