@@ -1,57 +1,110 @@
 import { useState } from "react";
+
 import {
+  Alert,
+  Platform,
   View,
   StyleSheet,
   Text,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import { router } from "expo-router";
+
 import { Ionicons } from "@expo/vector-icons";
 
 import FormField from "@/components/FormField";
+
 import PrimaryButton from "@/components/PrimaryButton";
+
 import { COLORS } from "@/constants/colors";
-import users from "@/data/users.json";
+
+import { api } from "@/services/api";
+
+const showAlert = (
+  title: string,
+  message: string,
+  onPress?: () => void
+) => {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n\n${message}`);
+
+    if (onPress) {
+      onPress();
+    }
+
+    return;
+  }
+
+  Alert.alert(
+    title,
+    message,
+    [
+      {
+        text: "OK",
+        onPress,
+      },
+    ]
+  );
+};
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
 
-  const handleReset = () => {
+  const [loading, setLoading] = useState(false);
 
+  const handleReset = async () => {
     if (!email.trim()) {
-      window.alert("Please enter your email.");
+      showAlert(
+        "Missing Information",
+        "Please enter your email."
+      );
       return;
     }
 
     const emailRegex = /\S+@\S+\.\S+/;
 
     if (!emailRegex.test(email.trim())) {
-      window.alert("Please enter a valid email.");
+      showAlert(
+        "Invalid Email",
+        "Please enter a valid email."
+      );
       return;
     }
 
-    const user = users.find(
-      (u) =>
-        u.email.toLowerCase() ===
-        email.trim().toLowerCase()
-    );
+    setLoading(true);
 
-    if (!user) {
-      window.alert("No account found with this email.");
-      return;
+    try {
+      const response = await api.post(
+        "/api/auth/forgot-password",
+        {
+          email: email.trim(),
+        }
+      );
+
+      showAlert(
+        "Reset Request",
+        response.data.message,
+        () => router.replace("/(auth)/login")
+      );
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message ||
+        "Something went wrong. Please try again.";
+
+      showAlert(
+        "Request Failed",
+        message
+      );
+    } finally {
+      setLoading(false);
     }
-
-    window.alert(
-      "Password reset request simulated successfully."
-    );
-
-    router.replace("/(auth)/login");
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-
         <View style={styles.iconContainer}>
           <Ionicons
             name="lock-closed-outline"
@@ -83,12 +136,12 @@ export default function ForgotPasswordScreen() {
         <PrimaryButton
           title="Send Reset Instruction"
           onPress={handleReset}
+          loading={loading}
         />
 
         <Text style={styles.note}>
           No email is actually sent in this frontend prototype.
         </Text>
-
       </View>
     </SafeAreaView>
   );
