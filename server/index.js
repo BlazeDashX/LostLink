@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const bcrypt = require("bcryptjs");
 
 const {
   findUserByEmail,
@@ -35,12 +36,14 @@ app.post("/api/auth/register", async (req, res) => {
     });
   }
 
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   const newUser = {
     id: Date.now().toString(),
     name,
     email,
     phone,
-    password,
+    password: hashedPassword,
     role: "User",
     status: "Active",
     avatar: "",
@@ -67,7 +70,24 @@ app.post("/api/auth/login", async (req, res) => {
 
   const user = await findUserByEmail(email);
 
-  if (!user || user.password !== password) {
+  if (!user) {
+    return res.status(401).json({
+      message: "Invalid email or password",
+    });
+  }
+
+  let passwordMatches = false;
+
+  if (user.password.startsWith("$2")) {
+    passwordMatches = await bcrypt.compare(
+      password,
+      user.password
+    );
+  } else {
+    passwordMatches = user.password === password;
+  }
+
+  if (!passwordMatches) {
     return res.status(401).json({
       message: "Invalid email or password",
     });

@@ -7,6 +7,7 @@ import {
   Text,
   ScrollView,
   Alert,
+  Platform,
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -42,6 +43,7 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [loading, setLoading] = useState(false);
 
   const [errors, setErrors] = useState<FormErrors>({
@@ -125,7 +127,6 @@ export default function RegisterScreen() {
     field: keyof FormErrors,
     value: string
   ) => {
-    // Update the actual field value
     switch (field) {
       case "name":
         setName(value);
@@ -148,13 +149,11 @@ export default function RegisterScreen() {
         break;
     }
 
-    // Mark the field as touched
     setTouched((prev) => ({
       ...prev,
       [field]: true,
     }));
 
-    // Validate the field
     const error = validateField(field, value);
 
     setErrors((prev) => ({
@@ -162,7 +161,6 @@ export default function RegisterScreen() {
       [field]: error,
     }));
 
-    // If password changes, confirm password may also become invalid
     if (field === "password" && touched.confirmPassword) {
       setErrors((prev) => ({
         ...prev,
@@ -202,45 +200,70 @@ export default function RegisterScreen() {
     );
   };
 
-  const handleRegister = async () => {
-  const isValid = validateAllFields();
+  const showAlert = (
+    title: string,
+    message: string,
+    onPress?: () => void
+  ) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
 
-  if (!isValid) {
-    return;
-  }
+      if (onPress) {
+        onPress();
+      }
 
-  setLoading(true);
-
-  try {
-    const response = await api.post("/api/auth/register", {
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      password,
-    });
+      return;
+    }
 
     Alert.alert(
-      "Registration Successful",
-      response.data.message,
+      title,
+      message,
       [
         {
           text: "OK",
-          onPress: () => {
-            router.replace("/(auth)/login");
-          },
+          onPress,
         },
       ]
     );
-  } catch (error: any) {
-    const message =
-      error.response?.data?.message ||
-      "Registration failed. Please try again.";
+  };
 
-    Alert.alert("Registration Failed", message);
-  } finally {
-    setLoading(false);
-  }
-};
+  const handleRegister = async () => {
+    const isValid = validateAllFields();
+
+    if (!isValid) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await api.post("/api/auth/register", {
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        password,
+      });
+
+      showAlert(
+        "Registration Successful",
+        response.data.message,
+        () => {
+          router.replace("/(auth)/login");
+        }
+      );
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message ||
+        "Registration failed. Please try again.";
+
+      showAlert(
+        "Registration Failed",
+        message
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -249,7 +272,9 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()}>
+          <Pressable
+            onPress={() => router.back()}
+          >
             <Ionicons
               name="arrow-back"
               size={24}
@@ -262,7 +287,9 @@ export default function RegisterScreen() {
           </Text>
         </View>
 
-        <Text style={styles.heading}>Join LostLink</Text>
+        <Text style={styles.heading}>
+          Join LostLink
+        </Text>
 
         <Text style={styles.helperText}>
           Create your LostLink account.
@@ -319,7 +346,10 @@ export default function RegisterScreen() {
           showPasswordToggle
           value={confirmPassword}
           onChangeText={(value) =>
-            handleFieldChange("confirmPassword", value)
+            handleFieldChange(
+              "confirmPassword",
+              value
+            )
           }
           error={
             touched.confirmPassword
