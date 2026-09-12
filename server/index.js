@@ -1,10 +1,15 @@
 const express = require("express");
 const cors = require("cors");
-const { findUserByEmail, createUser } = require("./data/userStore");
+
+const {
+  findUserByEmail,
+  createUser,
+} = require("./data/userStore");
 
 const app = express();
 
 app.use(express.json());
+
 app.use(cors());
 
 app.get("/", (req, res) => {
@@ -13,7 +18,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.post("/api/auth/register", (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   const { name, email, phone, password } = req.body;
 
   if (!name || !email || !phone || !password) {
@@ -22,7 +27,7 @@ app.post("/api/auth/register", (req, res) => {
     });
   }
 
-  const existingUser = findUserByEmail(email);
+  const existingUser = await findUserByEmail(email);
 
   if (existingUser) {
     return res.status(409).json({
@@ -41,7 +46,7 @@ app.post("/api/auth/register", (req, res) => {
     avatar: "",
   };
 
-  createUser(newUser);
+  await createUser(newUser);
 
   const { password: _, ...safeUser } = newUser;
 
@@ -51,7 +56,7 @@ app.post("/api/auth/register", (req, res) => {
   });
 });
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -60,7 +65,7 @@ app.post("/api/auth/login", (req, res) => {
     });
   }
 
-  const user = findUserByEmail(email);
+  const user = await findUserByEmail(email);
 
   if (!user || user.password !== password) {
     return res.status(401).json({
@@ -82,23 +87,28 @@ app.post("/api/auth/login", (req, res) => {
   });
 });
 
-app.post("/api/auth/forgot-password", (req, res) => {
-  const { email } = req.body;
+app.post(
+  "/api/auth/forgot-password",
+  async (req, res) => {
+    const { email } = req.body;
 
-  if (!email) {
-    return res.status(400).json({
-      message: "Email is required",
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+      });
+    }
+
+    const user = await findUserByEmail(email);
+
+    return res.status(200).json({
+      message:
+        "If an account exists with this email, a password reset request has been created.",
     });
   }
-
-  const user = findUserByEmail(email);
-
-  return res.status(200).json({
-    message:
-      "If an account exists with this email, a password reset request has been created.",
-  });
-});
+);
 
 app.listen(3000, () => {
-  console.log("LostLink server is running on port 3000");
+  console.log(
+    "LostLink server is running on port 3000"
+  );
 });

@@ -1,14 +1,14 @@
 const users = require("../../data/users.json");
 
-function findUserByEmail(email) {
+async function findUserByEmail(email) {
   return users.find(
-    (user) => user.email.toLowerCase() === email.toLowerCase()
+    (user) =>
+      user.email.toLowerCase() === email.toLowerCase()
   );
 }
 
-function createUser(user) {
+async function createUser(user) {
   users.push(user);
-
   return user;
 }
 
