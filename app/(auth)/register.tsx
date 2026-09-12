@@ -1,19 +1,24 @@
 import React, { useState } from "react";
+
 import {
   View,
   Pressable,
   StyleSheet,
   Text,
   ScrollView,
+  Alert,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { COLORS } from "@/constants/colors";
+
 import FormField from "@/components/FormField";
 import PrimaryButton from "@/components/PrimaryButton";
-import { useApp } from "@/context/AppContext";
+
+import { api } from "@/services/api";
 
 interface FormErrors {
   name: string;
@@ -32,13 +37,12 @@ interface TouchedFields {
 }
 
 export default function RegisterScreen() {
-  const { register } = useApp();
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [errors, setErrors] = useState<FormErrors>({
     name: "",
@@ -198,31 +202,45 @@ export default function RegisterScreen() {
     );
   };
 
-  const handleRegister = () => {
-    // Validate all fields before registration
-    const isValid = validateAllFields();
+  const handleRegister = async () => {
+  const isValid = validateAllFields();
 
-    if (!isValid) {
-      return;
-    }
+  if (!isValid) {
+    return;
+  }
 
-    const result = register(
-      name.trim(),
-      email.trim(),
-      phone.trim(),
-      password
+  setLoading(true);
+
+  try {
+    const response = await api.post("/api/auth/register", {
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      password,
+    });
+
+    Alert.alert(
+      "Registration Successful",
+      response.data.message,
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            router.replace("/(auth)/login");
+          },
+        },
+      ]
     );
+  } catch (error: any) {
+    const message =
+      error.response?.data?.message ||
+      "Registration failed. Please try again.";
 
-    // Duplicate email or another registration error
-    if (!result.ok) {
-      window.alert(result.message);
-      return;
-    }
-
-    // Registration successful
-    window.alert(result.message);
-    router.replace("/(auth)/login");
-  };
+    Alert.alert("Registration Failed", message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -247,7 +265,7 @@ export default function RegisterScreen() {
         <Text style={styles.heading}>Join LostLink</Text>
 
         <Text style={styles.helperText}>
-          Create a simulated account using local data.
+          Create your LostLink account.
         </Text>
 
         <FormField
@@ -313,6 +331,7 @@ export default function RegisterScreen() {
         <PrimaryButton
           title="Create Account"
           onPress={handleRegister}
+          loading={loading}
         />
 
         <Text style={styles.noteText}>

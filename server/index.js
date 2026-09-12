@@ -41,13 +41,15 @@ app.post("/api/auth/register", (req, res) => {
     avatar: "",
   };
 
-  createUser(newUser);
+ createUser(newUser);
 
-  res.status(201).json({
-    message: "Registration successful",
-    user: newUser,
-  });
-});
+    const { password: _, ...safeUser } = newUser;
+
+    res.status(201).json({
+        message: "Registration successful",
+        user: safeUser,
+    }
+);
 
 
 app.post("/api/auth/login", (req, res) => {
