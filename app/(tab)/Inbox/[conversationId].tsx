@@ -80,7 +80,7 @@ export default function ChatScreen() {
   }, [activeMessage, conversationId, currentUserId, setMessages]);
 
   const handleSend = () => {
-    if (!draft.trim() || !otherUser || !item) return;
+    if (!draft.trim() || !otherUser || !item || !currentUserId) return;
 
     const newMessage = {
       id: `MSG${Date.now()}`,

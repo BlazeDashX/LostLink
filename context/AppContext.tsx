@@ -42,7 +42,6 @@ interface ActionResponse {
 interface AppContextType {
   currentUserId: string | null;
   currentUser: SafeUser | null;
-
   setCurrentUserId: React.Dispatch<
     React.SetStateAction<string | null>
   >;
@@ -203,7 +202,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const isAuthenticated = currentUserId !== null;
-
   const currentUser: SafeUser | null =
     users.find((user) => user.id === currentUserId) ?? null;
 

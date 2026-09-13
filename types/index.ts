@@ -16,14 +16,14 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  password:string;
   phone: string;
   role: UserRole;
   status: UserStatus;
   avatar: string;
+  password?: string;
 }
 
-export type SafeUser = Omit<User, "password">;
+export type SafeUser = User;
 
 export interface Item {
   id: string;

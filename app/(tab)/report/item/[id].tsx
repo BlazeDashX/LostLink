@@ -50,7 +50,7 @@ export default function ItemDetailsScreen() {
   }
 
   const handleContactReporter = () => {
-    if (!reporter) return;
+    if (!reporter || !currentUserId) return;
 
     const existingMessage = messages.find(
       (m) =>
