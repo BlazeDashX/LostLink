@@ -39,6 +39,7 @@ export default function FormField({
         <TextInput
           style={styles.input}
           placeholderTextColor={COLORS.textSecondary}
+          accessibilityLabel={label}
           secureTextEntry={
             showPasswordToggle
               ? !isPasswordVisible
@@ -49,6 +50,12 @@ export default function FormField({
 
         {showPasswordToggle && (
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              isPasswordVisible
+                ? `Hide ${label}`
+                : `Show ${label}`
+            }
             onPress={() =>
               setIsPasswordVisible(!isPasswordVisible)
             }

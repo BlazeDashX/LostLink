@@ -1,25 +1,27 @@
 import React, {
   createContext,
-  ReactNode,
   useContext,
   useEffect,
   useState,
+  ReactNode,
 } from "react";
 
-import claimsData from "@/data/claims.json";
+import usersData from "@/data/users.json";
 import itemsData from "@/data/items.json";
 import messagesData from "@/data/message.json";
+import claimsData from "@/data/claims.json";
 import notificationsData from "@/data/notifications.json";
-import usersData from "@/data/users.json";
 
 import {
-  Claim,
-  ClaimAnswers,
+  User,
   Item,
   Message,
+  Claim,
   Notification,
-  User,
+  ClaimAnswers,
 } from "@/types";
+
+import { api } from "@/services/api";
 
 interface SubmitClaimData {
   itemId: string;
@@ -36,8 +38,9 @@ interface ActionResponse {
 
 interface AppContextType {
   currentUserId: string | null;
-  setCurrentUserId: React.Dispatch<React.SetStateAction<string | null>>;
-  currentUser: User | null;
+  setCurrentUserId: React.Dispatch<
+    React.SetStateAction<string | null>
+  >;
 
   users: User[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
@@ -52,11 +55,13 @@ interface AppContextType {
   setClaims: React.Dispatch<React.SetStateAction<Claim[]>>;
 
   notifications: Notification[];
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  setNotifications: React.Dispatch<
+    React.SetStateAction<Notification[]>
+  >;
 
   // Item Actions
   addItem: (
-    data: Omit<Item, "id" | "reporterId" | "status" | "createdAt">,
+    data: Omit<Item, "id" | "reporterId" | "status" | "createdAt">
   ) => ActionResponse;
 
   // Claim Actions
@@ -66,16 +71,19 @@ interface AppContextType {
   getClaimById: (claimId: string) => Claim | undefined;
   getClaimsByItem: (itemId: string) => Claim[];
 
-  //Authentication
+  // Authentication
   isAuthenticated: boolean;
 
-  login: (email: string, password: string) => ActionResponse;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<ActionResponse>;
 
   register: (
     name: string,
     email: string,
     phone: string,
-    password: string,
+    password: string
   ) => ActionResponse;
 
   logout: () => void;
@@ -84,13 +92,17 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(
+    null
+  );
 
   const [users, setUsers] = useState<User[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>(
+    []
+  );
 
   useEffect(() => {
     setUsers(usersData as User[]);
@@ -104,10 +116,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     name: string,
     email: string,
     phone: string,
-    password: string,
+    password: string
   ): ActionResponse => {
     const existingUser = users.find(
-      (user) => user.email.toLowerCase() === email.toLowerCase(),
+      (user) =>
+        user.email.toLowerCase() === email.toLowerCase()
     );
 
     if (existingUser) {
@@ -129,46 +142,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     setUsers((prev) => [...prev, newUser]);
+
     return {
       ok: true,
       message: "Account created successfully.",
     };
   };
 
-  const login = (email: string, password: string): ActionResponse => {
-    const sanitizedEmail = email.trim().toLowerCase();
-    const sanitizedPassword = password.trim();
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<ActionResponse> => {
+    try {
+      const response = await api.post("/api/auth/login", {
+        email: email.trim(),
+        password,
+      });
 
-    console.log("Login attempt:", sanitizedEmail);
-    const user = users.find(
-      (u) =>
-        u.email.toLowerCase() === sanitizedEmail &&
-        u.password === sanitizedPassword
-    );
+      const loggedInUser = response.data.user;
 
-    console.log("Matched user:", user);
+      const existingUser = users.find(
+        (user) => user.id === loggedInUser.id
+      );
 
-    if (!user) {
+      const userForContext: User = {
+        ...loggedInUser,
+        password: existingUser?.password || "",
+      };
+
+      setUsers((prev) => {
+        const userExists = prev.some(
+          (user) => user.id === loggedInUser.id
+        );
+
+        if (userExists) {
+          return prev.map((user) =>
+            user.id === loggedInUser.id
+              ? {
+                  ...user,
+                  ...loggedInUser,
+                }
+              : user
+          );
+        }
+
+        return [...prev, userForContext];
+      });
+
+      setCurrentUserId(loggedInUser.id);
+
+      return {
+        ok: true,
+        message: response.data.message,
+        user: userForContext,
+      };
+    } catch (error: any) {
       return {
         ok: false,
-        message: "Invalid email or password.",
+        message:
+          error.response?.data?.message ||
+          "Login failed. Please try again.",
       };
     }
-
-    if (user.status === "Suspended") {
-      return {
-        ok: false,
-        message: "Your account has been suspended.",
-      };
-    }
-
-    setCurrentUserId(user.id);
-
-    return {
-      ok: true,
-      message: "Login successful.",
-      user,
-    };
   };
 
   const logout = () => {
@@ -177,7 +212,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = currentUserId !== null;
 
-  const submitClaim = (data: SubmitClaimData): ActionResponse => {
+  const submitClaim = (
+    data: SubmitClaimData
+  ): ActionResponse => {
     if (!currentUserId) {
       return {
         ok: false,
@@ -186,7 +223,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     const item = items.find((i) => i.id === data.itemId);
-    if (!item) return { ok: false, message: "Item not found." };
+
+    if (!item) {
+      return {
+        ok: false,
+        message: "Item not found.",
+      };
+    }
+
     if (item.reporterId === currentUserId) {
       return {
         ok: false,
@@ -198,13 +242,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       (c) =>
         c.itemId === data.itemId &&
         c.claimantId === currentUserId &&
-        ["Pending", "Approved"].includes(c.status),
+        ["Pending", "Approved"].includes(c.status)
     );
-    if (existingClaim)
+
+    if (existingClaim) {
       return {
         ok: false,
         message: "You already have an active claim for this item.",
       };
+    }
 
     const newClaim: Claim = {
       id: `CLM${Date.now()}`,
@@ -222,8 +268,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (item.status === "Active") {
       setItems((prev) =>
         prev.map((i) =>
-          i.id === item.id ? { ...i, status: "Pending Claim" } : i,
-        ),
+          i.id === item.id
+            ? { ...i, status: "Pending Claim" }
+            : i
+        )
       );
     }
 
@@ -234,65 +282,115 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  const approveClaim = (claimId: string): ActionResponse => {
+  const approveClaim = (
+    claimId: string
+  ): ActionResponse => {
     const claim = claims.find((c) => c.id === claimId);
-    if (!claim) return { ok: false, message: "Claim not found." };
+
+    if (!claim) {
+      return {
+        ok: false,
+        message: "Claim not found.",
+      };
+    }
 
     setClaims((prev) =>
       prev.map((c) => {
-        if (c.id === claimId)
-          return { ...c, status: "Approved", reviewedBy: currentUserId };
-        if (c.itemId === claim.itemId && c.status === "Pending")
-          return { ...c, status: "Rejected", reviewedBy: currentUserId };
+        if (c.id === claimId) {
+          return {
+            ...c,
+            status: "Approved",
+            reviewedBy: currentUserId,
+          };
+        }
+
+        if (
+          c.itemId === claim.itemId &&
+          c.status === "Pending"
+        ) {
+          return {
+            ...c,
+            status: "Rejected",
+            reviewedBy: currentUserId,
+          };
+        }
+
         return c;
-      }),
+      })
     );
 
     setItems((prev) =>
       prev.map((i) =>
-        i.id === claim.itemId ? { ...i, status: "Reserved" } : i,
-      ),
+        i.id === claim.itemId
+          ? { ...i, status: "Reserved" }
+          : i
+      )
     );
 
-    return { ok: true, message: "Claim approved. Item is now reserved." };
+    return {
+      ok: true,
+      message: "Claim approved. Item is now reserved.",
+    };
   };
 
-  const rejectClaim = (claimId: string): ActionResponse => {
+  const rejectClaim = (
+    claimId: string
+  ): ActionResponse => {
     const claim = claims.find((c) => c.id === claimId);
-    if (!claim) return { ok: false, message: "Claim not found." };
+
+    if (!claim) {
+      return {
+        ok: false,
+        message: "Claim not found.",
+      };
+    }
 
     setClaims((prev) =>
       prev.map((c) =>
         c.id === claimId
-          ? { ...c, status: "Rejected", reviewedBy: currentUserId }
-          : c,
-      ),
+          ? {
+              ...c,
+              status: "Rejected",
+              reviewedBy: currentUserId,
+            }
+          : c
+      )
     );
 
     const otherActiveClaims = claims.filter(
       (c) =>
         c.itemId === claim.itemId &&
         c.id !== claimId &&
-        ["Pending", "Approved"].includes(c.status),
+        ["Pending", "Approved"].includes(c.status)
     );
 
     if (otherActiveClaims.length === 0) {
       setItems((prev) =>
         prev.map((i) =>
-          i.id === claim.itemId ? { ...i, status: "Active" } : i,
-        ),
+          i.id === claim.itemId
+            ? { ...i, status: "Active" }
+            : i
+        )
       );
     }
 
-    return { ok: true, message: "Claim rejected." };
+    return {
+      ok: true,
+      message: "Claim rejected.",
+    };
   };
 
-  const getClaimById = (claimId: string): Claim | undefined => {
+  const getClaimById = (
+    claimId: string
+  ): Claim | undefined => {
     return claims.find((c) => c.id === claimId);
   };
 
   const addItem = (
-    data: Omit<Item, "id" | "reporterId" | "status" | "createdAt">,
+    data: Omit<
+      Item,
+      "id" | "reporterId" | "status" | "createdAt"
+    >
   ): ActionResponse => {
     if (!currentUserId) {
       return {
@@ -310,6 +408,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     setItems((prev) => [newItem, ...prev]);
+
     return {
       ok: true,
       message: "Item reported successfully.",
@@ -317,18 +416,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  const getClaimsByItem = (itemId: string): Claim[] => {
+  const getClaimsByItem = (
+    itemId: string
+  ): Claim[] => {
     return claims.filter((c) => c.itemId === itemId);
   };
-
-  const currentUser = users.find((u) => u.id === currentUserId) || null;
 
   return (
     <AppContext.Provider
       value={{
         currentUserId,
         setCurrentUserId,
-        currentUser,
         isAuthenticated,
         register,
         login,
@@ -358,8 +456,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 export function useApp() {
   const context = useContext(AppContext);
+
   if (!context) {
     throw new Error("useApp must be used inside AppProvider.");
   }
+
   return context;
 }

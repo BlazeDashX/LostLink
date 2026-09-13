@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { Alert ,View, StyleSheet, Text, Pressable } from "react-native";
+import {
+  Alert,
+  View,
+  StyleSheet,
+  Text,
+  Pressable,
+} from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
@@ -11,13 +18,14 @@ import { COLORS } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 
 export default function LoginScreen() {
-
   const { login } = useApp();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = () => {
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert(
         "Missing Information",
@@ -26,17 +34,34 @@ export default function LoginScreen() {
       return;
     }
 
-    const result = login(email, password);
-    
-    if (!result.ok || !result.user) {
-      Alert.alert("Login Failed", result.message);
-      return;
-    }
+    setLoading(true);
 
-    if (result.user.role === "Admin") {
-      router.replace("/(admin)");
-    } else {
-      router.replace("/(tab)/home");
+    try {
+      const result = await login(
+        email.trim(),
+        password
+      );
+
+      if (!result.ok) {
+        Alert.alert(
+          "Login Failed",
+          result.message
+        );
+        return;
+      }
+
+      if (result.user?.role === "Admin") {
+        router.replace("/(admin)");
+      } else {
+        router.replace("/(tab)/home");
+      }
+
+      Alert.alert(
+        "Login Successful",
+        result.message
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -45,7 +70,9 @@ export default function LoginScreen() {
       <View style={styles.content}>
         <BrandLogo />
 
-        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.title}>
+          Welcome Back
+        </Text>
 
         <Text style={styles.subtitle}>
           Sign in to continue your journey
@@ -71,7 +98,14 @@ export default function LoginScreen() {
 
         <View style={styles.forgotPasswordContainer}>
           <Pressable
-            onPress={() => router.push("/(auth)/forgot-password")}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot Password"
+            accessibilityHint="Opens the password reset screen"
+            onPress={() =>
+              router.push(
+                "/(auth)/forgot-password"
+              )
+            }
           >
             <Text style={styles.forgotPasswordText}>
               Forgot Password?
@@ -82,6 +116,7 @@ export default function LoginScreen() {
         <PrimaryButton
           title="Login"
           onPress={handleLogin}
+          loading={loading}
         />
 
         <View style={styles.footer}>
@@ -90,7 +125,12 @@ export default function LoginScreen() {
           </Text>
 
           <Pressable
-            onPress={() => router.push("/(auth)/register")}
+            accessibilityRole="button"
+            accessibilityLabel="Register"
+            accessibilityHint="Opens the registration screen"
+            onPress={() =>
+              router.push("/(auth)/register")
+            }
           >
             <Text style={styles.registerText}>
               Register

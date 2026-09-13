@@ -1,19 +1,25 @@
 import React, { useState } from "react";
+
 import {
   View,
   Pressable,
   StyleSheet,
   Text,
   ScrollView,
+  Alert,
+  Platform,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { COLORS } from "@/constants/colors";
+
 import FormField from "@/components/FormField";
 import PrimaryButton from "@/components/PrimaryButton";
-import { useApp } from "@/context/AppContext";
+
+import { api } from "@/services/api";
 
 interface FormErrors {
   name: string;
@@ -32,13 +38,13 @@ interface TouchedFields {
 }
 
 export default function RegisterScreen() {
-  const { register } = useApp();
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [loading, setLoading] = useState(false);
 
   const [errors, setErrors] = useState<FormErrors>({
     name: "",
@@ -121,7 +127,6 @@ export default function RegisterScreen() {
     field: keyof FormErrors,
     value: string
   ) => {
-    // Update the actual field value
     switch (field) {
       case "name":
         setName(value);
@@ -144,13 +149,11 @@ export default function RegisterScreen() {
         break;
     }
 
-    // Mark the field as touched
     setTouched((prev) => ({
       ...prev,
       [field]: true,
     }));
 
-    // Validate the field
     const error = validateField(field, value);
 
     setErrors((prev) => ({
@@ -158,7 +161,6 @@ export default function RegisterScreen() {
       [field]: error,
     }));
 
-    // If password changes, confirm password may also become invalid
     if (field === "password" && touched.confirmPassword) {
       setErrors((prev) => ({
         ...prev,
@@ -198,30 +200,69 @@ export default function RegisterScreen() {
     );
   };
 
-  const handleRegister = () => {
-    // Validate all fields before registration
+  const showAlert = (
+    title: string,
+    message: string,
+    onPress?: () => void
+  ) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
+
+      if (onPress) {
+        onPress();
+      }
+
+      return;
+    }
+
+    Alert.alert(
+      title,
+      message,
+      [
+        {
+          text: "OK",
+          onPress,
+        },
+      ]
+    );
+  };
+
+  const handleRegister = async () => {
     const isValid = validateAllFields();
 
     if (!isValid) {
       return;
     }
 
-    const result = register(
-      name.trim(),
-      email.trim(),
-      phone.trim(),
-      password
-    );
+    setLoading(true);
 
-    // Duplicate email or another registration error
-    if (!result.ok) {
-      window.alert(result.message);
-      return;
+    try {
+      const response = await api.post("/api/auth/register", {
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        password,
+      });
+
+      showAlert(
+        "Registration Successful",
+        response.data.message,
+        () => {
+          router.replace("/(auth)/login");
+        }
+      );
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message ||
+        "Registration failed. Please try again.";
+
+      showAlert(
+        "Registration Failed",
+        message
+      );
+    } finally {
+      setLoading(false);
     }
-
-    // Registration successful
-    window.alert(result.message);
-    router.replace("/(auth)/login");
   };
 
   return (
@@ -231,7 +272,12 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            accessibilityHint="Returns to the previous screen"
+            onPress={() => router.back()}
+          >
             <Ionicons
               name="arrow-back"
               size={24}
@@ -244,10 +290,12 @@ export default function RegisterScreen() {
           </Text>
         </View>
 
-        <Text style={styles.heading}>Join LostLink</Text>
+        <Text style={styles.heading}>
+          Join LostLink
+        </Text>
 
         <Text style={styles.helperText}>
-          Create a simulated account using local data.
+          Create your LostLink account.
         </Text>
 
         <FormField
@@ -301,7 +349,10 @@ export default function RegisterScreen() {
           showPasswordToggle
           value={confirmPassword}
           onChangeText={(value) =>
-            handleFieldChange("confirmPassword", value)
+            handleFieldChange(
+              "confirmPassword",
+              value
+            )
           }
           error={
             touched.confirmPassword
@@ -313,6 +364,7 @@ export default function RegisterScreen() {
         <PrimaryButton
           title="Create Account"
           onPress={handleRegister}
+          loading={loading}
         />
 
         <Text style={styles.noteText}>
@@ -325,7 +377,10 @@ export default function RegisterScreen() {
           </Text>
 
           <Pressable
-            onPress={() =>
+              accessibilityRole="button"
+              accessibilityLabel="Login"
+              accessibilityHint="Opens the login screen"
+              onPress={() =>
               router.replace("/(auth)/login")
             }
           >
