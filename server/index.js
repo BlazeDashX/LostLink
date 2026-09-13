@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
@@ -8,12 +9,15 @@ const {
 } = require("./data/userStore");
 
 const categoriesRoutes = require("./routes/categories.routes");
+const claimsRoutes = require("./routes/claims.routes");
 
 const app = express();
 
 app.use(express.json());
-
 app.use(cors());
+
+// Mount API Routes
+app.use("/api/claims", claimsRoutes);
 
 app.get("/", (req, res) => {
   res.json({
