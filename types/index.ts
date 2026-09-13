@@ -12,6 +12,13 @@ export type ItemStatus =
 
 export type ClaimStatus = "Pending" | "Approved" | "Rejected" | "Completed";
 
+export interface Category {
+  id: string;
+  name: string;
+  icon?: string | null;
+  active: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
