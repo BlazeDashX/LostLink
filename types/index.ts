@@ -23,6 +23,8 @@ export interface User {
   avatar: string;
 }
 
+export type SafeUser = Omit<User, "password">;
+
 export interface Item {
   id: string;
   type: ItemType;

@@ -6,6 +6,8 @@ import React, {
   ReactNode,
 } from "react";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import usersData from "@/data/users.json";
 import itemsData from "@/data/items.json";
 import messagesData from "@/data/message.json";
@@ -14,6 +16,7 @@ import notificationsData from "@/data/notifications.json";
 
 import {
   User,
+  SafeUser,
   Item,
   Message,
   Claim,
@@ -33,17 +36,19 @@ interface ActionResponse {
   ok: boolean;
   message: string;
   claimId?: string;
-  user?: User;
+  user?: SafeUser;
 }
 
 interface AppContextType {
   currentUserId: string | null;
+  currentUser: SafeUser | null;
+
   setCurrentUserId: React.Dispatch<
     React.SetStateAction<string | null>
   >;
 
-  users: User[];
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+  users: SafeUser[];
+  setUsers: React.Dispatch<React.SetStateAction<SafeUser[]>>;
 
   items: Item[];
   setItems: React.Dispatch<React.SetStateAction<Item[]>>;
@@ -73,18 +78,12 @@ interface AppContextType {
 
   // Authentication
   isAuthenticated: boolean;
+  authLoading: boolean;
 
   login: (
     email: string,
     password: string
   ) => Promise<ActionResponse>;
-
-  register: (
-    name: string,
-    email: string,
-    phone: string,
-    password: string
-  ) => ActionResponse;
 
   logout: () => void;
 }
@@ -96,7 +95,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     null
   );
 
-  const [users, setUsers] = useState<User[]>([]);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  const [users, setUsers] = useState<SafeUser[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -105,49 +106,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    setUsers(usersData as User[]);
+    setUsers(
+      (usersData as User[]).map(
+        ({ password, ...user }) => user
+      )
+    );
+
     setItems(itemsData as Item[]);
     setMessages(messagesData as Message[]);
     setClaims(claimsData as Claim[]);
     setNotifications(notificationsData as Notification[]);
+
+    const restoreSession = async () => {
+      try {
+        const savedUserId = await AsyncStorage.getItem(
+          "currentUserId"
+        );
+
+        if (savedUserId) {
+          setCurrentUserId(savedUserId);
+        }
+      } catch (error) {
+        console.log("Failed to restore session:", error);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    restoreSession();
   }, []);
-
-  const register = (
-    name: string,
-    email: string,
-    phone: string,
-    password: string
-  ): ActionResponse => {
-    const existingUser = users.find(
-      (user) =>
-        user.email.toLowerCase() === email.toLowerCase()
-    );
-
-    if (existingUser) {
-      return {
-        ok: false,
-        message: "An account with this email already exists.",
-      };
-    }
-
-    const newUser: User = {
-      id: `U${String(users.length + 1).padStart(3, "0")}`,
-      name,
-      email,
-      phone,
-      password,
-      role: "User",
-      status: "Active",
-      avatar: "placeholder.png",
-    };
-
-    setUsers((prev) => [...prev, newUser]);
-
-    return {
-      ok: true,
-      message: "Account created successfully.",
-    };
-  };
 
   const login = async (
     email: string,
@@ -161,13 +148,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const loggedInUser = response.data.user;
 
-      const existingUser = users.find(
-        (user) => user.id === loggedInUser.id
-      );
-
-      const userForContext: User = {
+      const userForContext: SafeUser = {
         ...loggedInUser,
-        password: existingUser?.password || "",
       };
 
       setUsers((prev) => {
@@ -191,6 +173,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setCurrentUserId(loggedInUser.id);
 
+      await AsyncStorage.setItem(
+        "currentUserId",
+        loggedInUser.id
+      );
+
       return {
         ok: true,
         message: response.data.message,
@@ -206,11 +193,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setCurrentUserId(null);
+  const logout = async () => {
+    try {
+      await AsyncStorage.removeItem("currentUserId");
+      setCurrentUserId(null);
+    } catch (error) {
+      console.log("Failed to clear session:", error);
+    }
   };
 
   const isAuthenticated = currentUserId !== null;
+
+  const currentUser: SafeUser | null =
+    users.find((user) => user.id === currentUserId) ?? null;
 
   const submitClaim = (
     data: SubmitClaimData
@@ -426,9 +421,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider
       value={{
         currentUserId,
+        currentUser,
         setCurrentUserId,
         isAuthenticated,
-        register,
+        authLoading,
         login,
         logout,
         users,
