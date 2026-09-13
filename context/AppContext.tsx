@@ -42,6 +42,7 @@ interface ActionResponse {
 interface AppContextType {
   currentUserId: string | null;
   currentUser: SafeUser | null;
+
   setCurrentUserId: React.Dispatch<
     React.SetStateAction<string | null>
   >;
@@ -84,12 +85,16 @@ interface AppContextType {
     password: string
   ) => Promise<ActionResponse>;
 
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
-export function AppProvider({ children }: { children: ReactNode }) {
+export function AppProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(
     null
   );
@@ -122,11 +127,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
           "currentUserId"
         );
 
-        if (savedUserId) {
-          setCurrentUserId(savedUserId);
+        if (!savedUserId) {
+          return;
         }
+
+        const response = await api.get(
+          `/api/users/${savedUserId}`
+        );
+
+        const restoredUser = response.data.data;
+
+        setUsers((prev) => {
+          const userExists = prev.some(
+            (user) => user.id === restoredUser.id
+          );
+
+          if (userExists) {
+            return prev.map((user) =>
+              user.id === restoredUser.id
+                ? {
+                    ...user,
+                    ...restoredUser,
+                  }
+                : user
+            );
+          }
+
+          return [...prev, restoredUser];
+        });
+
+        setCurrentUserId(restoredUser.id);
       } catch (error) {
-        console.log("Failed to restore session:", error);
+        console.log(
+          "Failed to restore session:",
+          error
+        );
+
+        await AsyncStorage.removeItem("currentUserId");
+        setCurrentUserId(null);
       } finally {
         setAuthLoading(false);
       }
@@ -195,15 +233,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await AsyncStorage.removeItem("currentUserId");
+
       setCurrentUserId(null);
     } catch (error) {
-      console.log("Failed to clear session:", error);
+      console.log(
+        "Failed to clear session:",
+        error
+      );
     }
   };
 
   const isAuthenticated = currentUserId !== null;
+
   const currentUser: SafeUser | null =
-    users.find((user) => user.id === currentUserId) ?? null;
+    users.find(
+      (user) => user.id === currentUserId
+    ) ?? null;
 
   const submitClaim = (
     data: SubmitClaimData
@@ -215,7 +260,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    const item = items.find((i) => i.id === data.itemId);
+    const item = items.find(
+      (i) => i.id === data.itemId
+    );
 
     if (!item) {
       return {
@@ -227,7 +274,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (item.reporterId === currentUserId) {
       return {
         ok: false,
-        message: "The reporter cannot claim their own item.",
+        message:
+          "The reporter cannot claim their own item.",
       };
     }
 
@@ -241,7 +289,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (existingClaim) {
       return {
         ok: false,
-        message: "You already have an active claim for this item.",
+        message:
+          "You already have an active claim for this item.",
       };
     }
 
@@ -256,13 +305,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
 
-    setClaims((prev) => [...prev, newClaim]);
+    setClaims((prev) => [
+      ...prev,
+      newClaim,
+    ]);
 
     if (item.status === "Active") {
       setItems((prev) =>
         prev.map((i) =>
           i.id === item.id
-            ? { ...i, status: "Pending Claim" }
+            ? {
+                ...i,
+                status: "Pending Claim",
+              }
             : i
         )
       );
@@ -278,7 +333,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const approveClaim = (
     claimId: string
   ): ActionResponse => {
-    const claim = claims.find((c) => c.id === claimId);
+    const claim = claims.find(
+      (c) => c.id === claimId
+    );
 
     if (!claim) {
       return {
@@ -315,21 +372,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setItems((prev) =>
       prev.map((i) =>
         i.id === claim.itemId
-          ? { ...i, status: "Reserved" }
+          ? {
+              ...i,
+              status: "Reserved",
+            }
           : i
       )
     );
 
     return {
       ok: true,
-      message: "Claim approved. Item is now reserved.",
+      message:
+        "Claim approved. Item is now reserved.",
     };
   };
 
   const rejectClaim = (
     claimId: string
   ): ActionResponse => {
-    const claim = claims.find((c) => c.id === claimId);
+    const claim = claims.find(
+      (c) => c.id === claimId
+    );
 
     if (!claim) {
       return {
@@ -354,14 +417,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       (c) =>
         c.itemId === claim.itemId &&
         c.id !== claimId &&
-        ["Pending", "Approved"].includes(c.status)
+        ["Pending", "Approved"].includes(
+          c.status
+        )
     );
 
     if (otherActiveClaims.length === 0) {
       setItems((prev) =>
         prev.map((i) =>
           i.id === claim.itemId
-            ? { ...i, status: "Active" }
+            ? {
+                ...i,
+                status: "Active",
+              }
             : i
         )
       );
@@ -376,7 +444,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getClaimById = (
     claimId: string
   ): Claim | undefined => {
-    return claims.find((c) => c.id === claimId);
+    return claims.find(
+      (c) => c.id === claimId
+    );
   };
 
   const addItem = (
@@ -393,18 +463,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     const newItem: Item = {
-      id: `I${String(items.length + 1).padStart(3, "0")}`,
+      id: `I${String(
+        items.length + 1
+      ).padStart(3, "0")}`,
       ...data,
       reporterId: currentUserId,
       status: "Active",
       createdAt: new Date().toISOString(),
     };
 
-    setItems((prev) => [newItem, ...prev]);
+    setItems((prev) => [
+      newItem,
+      ...prev,
+    ]);
 
     return {
       ok: true,
-      message: "Item reported successfully.",
+      message:
+        "Item reported successfully.",
       claimId: newItem.id,
     };
   };
@@ -412,7 +488,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getClaimsByItem = (
     itemId: string
   ): Claim[] => {
-    return claims.filter((c) => c.itemId === itemId);
+    return claims.filter(
+      (c) => c.itemId === itemId
+    );
   };
 
   return (
@@ -452,7 +530,9 @@ export function useApp() {
   const context = useContext(AppContext);
 
   if (!context) {
-    throw new Error("useApp must be used inside AppProvider.");
+    throw new Error(
+      "useApp must be used inside AppProvider."
+    );
   }
 
   return context;
