@@ -115,9 +115,29 @@ async function deleteItem(id) {
   return result.rowCount > 0;
 }
 
+/**
+ * Retrieve items reported by a specific user from the items table.
+ * @param {string} reporterId
+ * @returns {Promise<Array<Object>>} List of items formatted with camelCase properties
+ */
+async function getItemsByReporter(reporterId) {
+  const sql = `
+    SELECT id, type, title, category_id AS "categoryId", description, location,
+           TO_CHAR(report_date, 'YYYY-MM-DD') AS "reportDate",
+           image, reporter_id AS "reporterId", status,
+           created_at AS "createdAt"
+    FROM items
+    WHERE reporter_id = $1
+    ORDER BY created_at DESC
+  `;
+  const result = await query(sql, [reporterId]);
+  return result.rows;
+}
+
 module.exports = {
   createItem,
   getItemById,
   updateItem,
   deleteItem,
+  getItemsByReporter,
 };

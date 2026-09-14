@@ -139,3 +139,25 @@ export async function deleteItem(
   });
   return response.data;
 }
+
+export interface MyReportsResponse {
+  items: Item[];
+}
+
+/**
+ * Fetch all item reports belonging to the authenticated user.
+ * The server determines ownership from the auth session — not from client data.
+ * @param userId Authenticated user ID (sent in x-user-id header)
+ * @returns Promise<Item[]>
+ */
+export async function getMyReports(userId?: string | null): Promise<Item[]> {
+  const headers: Record<string, string> = {};
+  if (userId) {
+    headers["x-user-id"] = userId;
+  }
+  const response = await api.get<MyReportsResponse>("/api/items", {
+    params: { mine: "true" },
+    headers,
+  });
+  return response.data.items ?? [];
+}

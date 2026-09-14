@@ -1,10 +1,19 @@
 // screens/MyActivityScreen.tsx
 // SRS 13.15 — My Activity Screen
 // Adjust the AppContext import path below to match your project.
-import React, { useMemo, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useApp } from "@/context/AppContext";
+import { getMyReports } from "@/services/items";
 import { Item, Claim } from "@/types";
 
 const COLORS = {
@@ -56,10 +65,42 @@ export default function MyActivityScreen() {
   const { currentUserId, items, claims } = useApp();
   const [tab, setTab] = useState<Tab>("Reports");
 
-  // SRS 13.15.7 workflow step 1 — filter items by reporterId
-  const myReports = useMemo(
-    () => items.filter((i) => i.reporterId === currentUserId),
-    [items, currentUserId]
+  // SRS 13.15.7 workflow step 1 — fetch reporter's own items from backend API
+  const [myReports, setMyReports] = useState<Item[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
+  const [reportsError, setReportsError] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      async function fetchMyReports() {
+        setIsLoadingReports(true);
+        setReportsError(null);
+        try {
+          const data = await getMyReports(currentUserId);
+          if (!cancelled) {
+            setMyReports(data);
+          }
+        } catch (err: any) {
+          if (!cancelled) {
+            setReportsError(
+              err?.response?.data?.message ?? "Failed to load your reports."
+            );
+          }
+        } finally {
+          if (!cancelled) {
+            setIsLoadingReports(false);
+          }
+        }
+      }
+
+      fetchMyReports();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [currentUserId])
   );
 
   // SRS 13.15.7 workflow step 2 — filter claims by claimantId
@@ -81,6 +122,7 @@ export default function MyActivityScreen() {
     const combined = [...solvedReports, ...solvedFromClaims];
     return combined.filter((item, idx) => combined.findIndex((x) => x.id === item.id) === idx);
   }, [myReports, myClaims, items]);
+
 
   function renderItemRow(item: Item) {
     const editable = item.status === "Active";
@@ -173,7 +215,22 @@ export default function MyActivityScreen() {
         renderItem={({ item: entry }) =>
           tab === "Claims" ? renderClaimRow(entry as Claim) : renderItemRow(entry as Item)
         }
+        ListHeaderComponent={
+          tab === "Reports" ? (
+            isLoadingReports ? (
+              <View style={styles.loadingState}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Loading your reports…</Text>
+              </View>
+            ) : reportsError ? (
+              <View style={styles.errorState}>
+                <Text style={styles.errorText}>{reportsError}</Text>
+              </View>
+            ) : null
+          ) : null
+        }
         ListEmptyComponent={
+          isLoadingReports && tab === "Reports" ? null : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>Nothing here yet</Text>
             <Text style={styles.emptySubtitle}>
@@ -184,6 +241,7 @@ export default function MyActivityScreen() {
                 : "Solved recoveries will appear here."}
             </Text>
           </View>
+          )
         }
       />
 
@@ -313,5 +371,30 @@ const styles = StyleSheet.create({
   summaryText: { fontSize: 13,
      color: COLORS.text,
      marginTop: 4 },
+
+  loadingState: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+    gap: 8,
+  },
+
+  loadingText: {
+    fontSize: 13,
+    color: COLORS.subtext,
+  },
+
+  errorState: {
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+
+  errorText: {
+    fontSize: 13,
+    color: COLORS.red,
+    textAlign: "center",
+  },
      
 });

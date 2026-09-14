@@ -308,6 +308,34 @@ async function updateItem(req, res) {
 }
 
 /**
+ * Controller to handle GET /api/items?mine=true
+ * Returns all items reported by the authenticated user.
+ * The reporter identity is always sourced from req.user.id (never the client).
+ */
+async function getItems(req, res) {
+  try {
+    const { mine } = req.query;
+
+    if (mine !== "true") {
+      return res.status(400).json({
+        message: "Only mine=true is supported for this endpoint.",
+      });
+    }
+
+    const reporterId = req.user.id;
+    const items = await itemsQueries.getItemsByReporter(reporterId);
+
+    return res.status(200).json({ items });
+  } catch (error) {
+    console.error("Error fetching user items:", error);
+    return res.status(500).json({
+      message: "Failed to fetch your item reports.",
+      error: error.message,
+    });
+  }
+}
+
+/**
  * Controller to handle DELETE /api/items/:id
  * Verifies that the user owns the report (or is Admin),
  * and permanently deletes the item and cascades dependent records.
@@ -352,6 +380,7 @@ async function deleteItem(req, res) {
 
 module.exports = {
   createItem,
+  getItems,
   getItem,
   updateItem,
   deleteItem,
