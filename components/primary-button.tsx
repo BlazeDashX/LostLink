@@ -29,6 +29,9 @@ export default function PrimaryButton({
 
   return (
     <TouchableOpacity
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading }}
       activeOpacity={0.75}
       disabled={disabled || loading}
       onPress={onPress}

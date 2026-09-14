@@ -29,6 +29,7 @@ export default function FormField({
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
+        accessibilityLabel={label}
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
         multiline={multiline}
