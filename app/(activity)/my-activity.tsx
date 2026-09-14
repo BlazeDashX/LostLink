@@ -1,6 +1,5 @@
-// screens/MyActivityScreen.tsx
+﻿// screens/MyActivityScreen.tsx
 // SRS 13.15 — My Activity Screen
-// Adjust the AppContext import path below to match your project.
 import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
@@ -65,52 +64,61 @@ export default function MyActivityScreen() {
   const { currentUserId, items, claims } = useApp();
   const [tab, setTab] = useState<Tab>("Reports");
 
-  // SRS 13.15.7 workflow step 1 — fetch reporter's own items from backend API
+  // Reports: fetched from backend API
   const [myReports, setMyReports] = useState<Item[]>([]);
   const [isLoadingReports, setIsLoadingReports] = useState(false);
   const [reportsError, setReportsError] = useState<string | null>(null);
 
+  const fetchMyReports = useCallback(async () => {
+    setIsLoadingReports(true);
+    setReportsError(null);
+    try {
+      const data = await getMyReports(currentUserId);
+      setMyReports(data);
+    } catch (err: any) {
+      setReportsError(
+        err?.response?.data?.message ?? "Failed to load your reports. Tap Retry."
+      );
+    } finally {
+      setIsLoadingReports(false);
+    }
+  }, [currentUserId]);
+
+  // Re-fetch whenever the screen is focused
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-
-      async function fetchMyReports() {
+      async function fetchOnFocus() {
         setIsLoadingReports(true);
         setReportsError(null);
         try {
           const data = await getMyReports(currentUserId);
-          if (!cancelled) {
-            setMyReports(data);
-          }
+          if (!cancelled) setMyReports(data);
         } catch (err: any) {
           if (!cancelled) {
             setReportsError(
-              err?.response?.data?.message ?? "Failed to load your reports."
+              err?.response?.data?.message ?? "Failed to load your reports. Tap Retry."
             );
           }
         } finally {
-          if (!cancelled) {
-            setIsLoadingReports(false);
-          }
+          if (!cancelled) setIsLoadingReports(false);
         }
       }
-
-      fetchMyReports();
-
-      return () => {
-        cancelled = true;
-      };
+      fetchOnFocus();
+      return () => { cancelled = true; };
     }, [currentUserId])
   );
 
-  // SRS 13.15.7 workflow step 2 — filter claims by claimantId
+  // Claims: sourced from AppContext (no backend claims API in this project).
+  // All claim operations go through AppContext which is consistent with the
+  // submit and review screens owned by the other team member.
+  // SRS 13.15.7 workflow step 2
   const myClaims = useMemo(
     () => claims.filter((c) => c.claimantId === currentUserId),
     [claims, currentUserId]
   );
 
-  // SRS 13.15.7 workflow step 3 — derive solved recoveries (as reporter or
-  // as a claimant whose claim reached Completed and the item is Solved)
+  // SRS 13.15.7 workflow step 3
   const solvedRecoveries = useMemo(() => {
     const solvedReports = myReports.filter((i) => i.status === "Solved");
     const completedClaimItemIds = myClaims
@@ -120,13 +128,13 @@ export default function MyActivityScreen() {
       (i) => completedClaimItemIds.includes(i.id) && i.status === "Solved"
     );
     const combined = [...solvedReports, ...solvedFromClaims];
-    return combined.filter((item, idx) => combined.findIndex((x) => x.id === item.id) === idx);
+    return combined.filter(
+      (item, idx) => combined.findIndex((x) => x.id === item.id) === idx
+    );
   }, [myReports, myClaims, items]);
-
 
   function renderItemRow(item: Item) {
     const editable = item.status === "Active";
-
     return (
       <View style={styles.card}>
         <TouchableOpacity
@@ -147,7 +155,6 @@ export default function MyActivityScreen() {
             <View style={[styles.progressBar, { backgroundColor: statusColor(item.status) }]} />
           </View>
         </TouchableOpacity>
-
         <TouchableOpacity
           accessibilityRole="button"
           onPress={() =>
@@ -169,14 +176,24 @@ export default function MyActivityScreen() {
       <TouchableOpacity
         key={claim.id}
         style={styles.card}
-        onPress={() => router.push({ pathname: "/report/claim/review", params: { claimId: claim.id } })}
+        activeOpacity={0.75}
+        onPress={() =>
+          router.push({ pathname: "/report/claim/review", params: { claimId: claim.id } })
+        }
       >
         <View style={styles.cardThumb}>
           <Text style={styles.cardThumbText}>{item.title.slice(0, 3).toUpperCase()}</Text>
         </View>
         <View style={styles.cardBody}>
           <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardSubtitle}>Claim · {claim.status}</Text>
+          <Text style={styles.cardSubtitle}>
+            {item.type} · Claim {claim.status} · {formatShortDate(claim.createdAt)}
+          </Text>
+          {claim.handoverMethod ? (
+            <Text style={styles.cardHandover} numberOfLines={1}>
+              Handover: {claim.handoverMethod}
+            </Text>
+          ) : null}
           <View style={[styles.progressBar, { backgroundColor: statusColor(claim.status) }]} />
         </View>
         <Text style={styles.cardAction}>View</Text>
@@ -184,13 +201,84 @@ export default function MyActivityScreen() {
     );
   }
 
-  const data = tab === "Reports" ? myReports : tab === "Claims" ? myClaims : solvedRecoveries;
+  function renderSolvedRow(item: Item) {
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={styles.card}
+        activeOpacity={0.75}
+        onPress={() =>
+          router.push({ pathname: "/report/item/[id]", params: { id: item.id } } as any)
+        }
+      >
+        <View style={[styles.cardThumb, { backgroundColor: "#DCFCE7" }]}>
+          <Text style={[styles.cardThumbText, { color: COLORS.green }]}>
+            {item.title.slice(0, 3).toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.cardBody}>
+          <Text style={styles.cardTitle}>{item.title}</Text>
+          <Text style={styles.cardSubtitle}>
+            {item.type} · Solved · {formatShortDate(item.reportDate)}
+          </Text>
+          <View style={[styles.progressBar, { backgroundColor: COLORS.green }]} />
+        </View>
+        <Text style={[styles.cardAction, { color: COLORS.green }]}>View</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  const data =
+    tab === "Reports"
+      ? myReports
+      : tab === "Claims"
+      ? myClaims
+      : solvedRecoveries;
+
+  function renderListHeader() {
+    if (tab === "Reports") {
+      if (isLoadingReports) {
+        return (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Loading your reports...</Text>
+          </View>
+        );
+      }
+      if (reportsError) {
+        return (
+          <View style={styles.errorState}>
+            <Text style={styles.errorText}>{reportsError}</Text>
+            <TouchableOpacity onPress={fetchMyReports} style={styles.retryButton}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+    }
+    return null;
+  }
+
+  function renderEmpty() {
+    if (tab === "Reports" && (isLoadingReports || reportsError)) return null;
+    const messages: Record<Tab, string> = {
+      Reports: "Reports you publish will appear here.",
+      Claims: "Claims you submit will appear here.",
+      Solved: "Solved recoveries will appear here.",
+    };
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyTitle}>Nothing here yet</Text>
+        <Text style={styles.emptySubtitle}>{messages[tab]}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backArrow}>{"‹"}</Text>
+          <Text style={styles.backArrow}>{"<"}</Text>
         </TouchableOpacity>
         <Text style={styles.header}>My Activity</Text>
       </View>
@@ -202,54 +290,32 @@ export default function MyActivityScreen() {
             style={[styles.tabButton, tab === t && styles.tabButtonActive]}
             onPress={() => setTab(t)}
           >
-            <Text style={[styles.tabButtonText, tab === t && styles.tabButtonTextActive]}>{t}</Text>
+            <Text style={[styles.tabButtonText, tab === t && styles.tabButtonTextActive]}>
+              {t}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* SRS uses FlatList with keyExtractor + renderItem + ListEmptyComponent */}
       <FlatList
         data={data as (Item | Claim)[]}
         keyExtractor={(entry) => entry.id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item: entry }) =>
-          tab === "Claims" ? renderClaimRow(entry as Claim) : renderItemRow(entry as Item)
-        }
-        ListHeaderComponent={
-          tab === "Reports" ? (
-            isLoadingReports ? (
-              <View style={styles.loadingState}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.loadingText}>Loading your reports…</Text>
-              </View>
-            ) : reportsError ? (
-              <View style={styles.errorState}>
-                <Text style={styles.errorText}>{reportsError}</Text>
-              </View>
-            ) : null
-          ) : null
-        }
-        ListEmptyComponent={
-          isLoadingReports && tab === "Reports" ? null : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>Nothing here yet</Text>
-            <Text style={styles.emptySubtitle}>
-              {tab === "Reports"
-                ? "Reports you publish will appear here."
-                : tab === "Claims"
-                ? "Claims you submit will appear here."
-                : "Solved recoveries will appear here."}
-            </Text>
-          </View>
-          )
-        }
+        renderItem={({ item: entry }) => {
+          if (tab === "Claims") return renderClaimRow(entry as Claim);
+          if (tab === "Solved") return renderSolvedRow(entry as Item);
+          return renderItemRow(entry as Item);
+        }}
+        ListHeaderComponent={renderListHeader}
+        ListEmptyComponent={renderEmpty}
       />
 
       <View style={styles.summaryBar}>
         <Text style={styles.summaryLabel}>Activity summary</Text>
         <Text style={styles.summaryText}>
-          {myReports.length} reports · {myClaims.length} claims · {solvedRecoveries.length} solved
-          recover{solvedRecoveries.length === 1 ? "y" : "ies"}
+          {myReports.length} reports · {myClaims.length} claims ·{" "}
+          {solvedRecoveries.length} solved recover
+          {solvedRecoveries.length === 1 ? "y" : "ies"}
         </Text>
       </View>
     </View>
@@ -257,144 +323,36 @@ export default function MyActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { 
-    flex: 1, 
-    backgroundColor: "#FFFFFF" },
-
-  headerRow: { flexDirection: "row",
-     alignItems: "center", 
-     paddingHorizontal: 20,
-      paddingTop: 16, 
-      gap: 12 },
-
-  backArrow: { fontSize: 24, 
-    color: COLORS.text },
-
-  header: { 
-    fontSize: 20,
-     fontWeight: "700",
-      color: COLORS.text },
-
-  tabRow: { flexDirection: "row", 
-    gap: 8,
-     paddingHorizontal: 20,
-      paddingVertical: 14 },
-
-  tabButton: { paddingHorizontal: 16,
-     paddingVertical: 8, 
-     borderRadius: 20, 
-     borderWidth: 1, 
-     borderColor: COLORS.border },
-
-  tabButtonActive: { backgroundColor: COLORS.primary,
-     borderColor: COLORS.primary },
-
-  tabButtonText: { fontSize: 13,
-    fontWeight: "600", 
-    color: COLORS.text },
-
+  screen: { flex: 1, backgroundColor: "#FFFFFF" },
+  headerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 16, gap: 12 },
+  backArrow: { fontSize: 24, color: COLORS.text },
+  header: { fontSize: 20, fontWeight: "700", color: COLORS.text },
+  tabRow: { flexDirection: "row", gap: 8, paddingHorizontal: 20, paddingVertical: 14 },
+  tabButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
+  tabButtonActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  tabButtonText: { fontSize: 13, fontWeight: "600", color: COLORS.text },
   tabButtonTextActive: { color: "#FFFFFF" },
-
-  listContent: { paddingHorizontal: 20,
-     paddingBottom: 12 },
-
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 12,
-    gap: 12,
-  },
-  cardThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardThumbText: { fontSize: 12, 
-    fontWeight: "700", 
-    color: COLORS.primaryDark },
-
-  cardMain: { alignItems: "center", 
-    flex: 1,
-     flexDirection: "row",
-     gap: 12 },
-
+  listContent: { paddingHorizontal: 20, paddingBottom: 12 },
+  card: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, padding: 12, marginBottom: 12, gap: 12 },
+  cardThumb: { width: 44, height: 44, borderRadius: 10, backgroundColor: COLORS.primaryLight, alignItems: "center", justifyContent: "center" },
+  cardThumbText: { fontSize: 12, fontWeight: "700", color: COLORS.primaryDark },
+  cardMain: { alignItems: "center", flex: 1, flexDirection: "row", gap: 12 },
   cardBody: { flex: 1 },
-
-  cardTitle: { fontSize: 14,
-     fontWeight: "700", 
-     color: COLORS.text },
-
-  cardSubtitle: { fontSize: 12,
-     color: COLORS.subtext,
-      marginTop: 2,
-      marginBottom: 6 },
-
-  progressBar: { height: 6,
-     borderRadius: 3,
-      width: "60%" },
-
-  cardAction: { fontSize: 13, 
-    fontWeight: "600", 
-    color: COLORS.primary },
-
-  emptyState: { alignItems: "center", 
-    paddingVertical: 48 },
-
-  emptyTitle: { fontSize: 15,
-    fontWeight: "600", 
-    color: COLORS.text },
-
-  emptySubtitle: { fontSize: 13, 
-    color: COLORS.subtext, 
-    marginTop: 4, 
-    textAlign: "center", 
-    paddingHorizontal: 32 },
-
-  summaryBar: {
-    backgroundColor: COLORS.primaryLight,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 14,
-    padding: 16,
-  },
-  summaryLabel: { fontSize: 12,
-     fontWeight: "700",
-      color: COLORS.primaryDark },
-
-  summaryText: { fontSize: 13,
-     color: COLORS.text,
-     marginTop: 4 },
-
-  loadingState: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 24,
-    gap: 8,
-  },
-
-  loadingText: {
-    fontSize: 13,
-    color: COLORS.subtext,
-  },
-
-  errorState: {
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-
-  errorText: {
-    fontSize: 13,
-    color: COLORS.red,
-    textAlign: "center",
-  },
-     
+  cardTitle: { fontSize: 14, fontWeight: "700", color: COLORS.text },
+  cardSubtitle: { fontSize: 12, color: COLORS.subtext, marginTop: 2, marginBottom: 4 },
+  cardHandover: { fontSize: 11, color: COLORS.subtext, marginBottom: 4 },
+  progressBar: { height: 6, borderRadius: 3, width: "60%" },
+  cardAction: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
+  emptyState: { alignItems: "center", paddingVertical: 48 },
+  emptyTitle: { fontSize: 15, fontWeight: "600", color: COLORS.text },
+  emptySubtitle: { fontSize: 13, color: COLORS.subtext, marginTop: 4, textAlign: "center", paddingHorizontal: 32 },
+  summaryBar: { backgroundColor: COLORS.primaryLight, marginHorizontal: 20, marginBottom: 20, borderRadius: 14, padding: 16 },
+  summaryLabel: { fontSize: 12, fontWeight: "700", color: COLORS.primaryDark },
+  summaryText: { fontSize: 13, color: COLORS.text, marginTop: 4 },
+  loadingState: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 24, gap: 8 },
+  loadingText: { fontSize: 13, color: COLORS.subtext },
+  errorState: { alignItems: "center", paddingVertical: 16, paddingHorizontal: 20 },
+  errorText: { fontSize: 13, color: COLORS.red, textAlign: "center" },
+  retryButton: { marginTop: 10, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: COLORS.primary },
+  retryText: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
 });
