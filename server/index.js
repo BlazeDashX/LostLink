@@ -10,10 +10,8 @@ const {
 
 const path = require("path");
 const categoriesRoutes = require("./routes/categories.routes");
-const itemsRoutes = require("./routes/items.routes");
-const uploadsRoutes = require("./routes/uploads.routes");
-const adminRoutes = require("./routes/admin.routes");
-const usersRoutes = require("./routes/users.routes");
+const claimsRoutes = require("./routes/claims.routes");
+const conversationsRoutes = require("./routes/conversations.routes");
 
 const app = express();
 
@@ -22,20 +20,16 @@ app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 app.use(cors());
 
-// Serve uploaded media files persistently
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Mount API Routes
+app.use("/api/claims", claimsRoutes);
+app.use("/api/categories", categoriesRoutes);
+app.use("/api/conversations", conversationsRoutes);
 
 app.get("/", (req, res) => {
   res.json({
     message: "LostLink API is running",
   });
 });
-
-app.use("/api/categories", categoriesRoutes);
-app.use("/api/items", itemsRoutes);
-app.use("/api/uploads", uploadsRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/users", usersRoutes);
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, phone, password } = req.body;

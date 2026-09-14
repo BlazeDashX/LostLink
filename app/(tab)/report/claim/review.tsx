@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import AnswerCard from "@/components/answer-card";
@@ -18,6 +19,8 @@ type ClaimReviewParams = {
 export default function ClaimReviewScreen() {
   const { claimId } = useLocalSearchParams() as ClaimReviewParams;
   const { claims, currentUserId, items, users, approveClaim, rejectClaim } = useApp();
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const claim = claims.find((candidate) => candidate.id === claimId);
   const item = items.find((candidate) => candidate.id === claim?.itemId);
@@ -47,16 +50,24 @@ export default function ClaimReviewScreen() {
   }
 
   const handleApprove = () => {
+    if (isApproving || isRejecting) return;
     Alert.alert(
       "Approve this claim?",
-      "The claim will become Approved and the item will be reserved for this claimant.",
+      "The claim will become Approved, competing pending claims will be rejected, and the item will be reserved for this claimant.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Approve",
-          onPress: () => {
-            const result = approveClaim(claim.id);
-            Alert.alert(result.ok ? "Claim approved" : "Unable to approve", result.message);
+          onPress: async () => {
+            setIsApproving(true);
+            try {
+              const result = await approveClaim(claim.id);
+              Alert.alert(result.ok ? "Claim Approved" : "Unable to Approve", result.message);
+            } catch (err: any) {
+              Alert.alert("Error", err.message || "An error occurred while approving the claim.");
+            } finally {
+              setIsApproving(false);
+            }
           },
         },
       ],
@@ -64,19 +75,29 @@ export default function ClaimReviewScreen() {
   };
 
   const handleReject = () => {
+    if (isApproving || isRejecting) return;
     Alert.alert(
       "Reject this claim?",
-      "The claim will become Rejected. The item will return to Active if no approved claim exists.",
+      "The claim will become Rejected. The item will return to Active if no other active claim exists.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Reject",
           style: "destructive",
-          onPress: () => {
-            const result = rejectClaim(claim.id);
-            Alert.alert(result.ok ? "Claim rejected" : "Unable to reject", result.message, [
-              { text: "OK", onPress: () => result.ok && router.back() },
-            ]);
+          onPress: async () => {
+            setIsRejecting(true);
+            try {
+              const result = await rejectClaim(claim.id);
+              Alert.alert(
+                result.ok ? "Claim Rejected" : "Unable to Reject",
+                result.message,
+                [{ text: "OK", onPress: () => result.ok && router.back() }]
+              );
+            } catch (err: any) {
+              Alert.alert("Error", err.message || "An error occurred while rejecting the claim.");
+            } finally {
+              setIsRejecting(false);
+            }
           },
         },
       ],
@@ -113,10 +134,22 @@ export default function ClaimReviewScreen() {
         {isActionable ? (
           <View style={styles.actions}>
             <View style={styles.actionItem}>
-              <PrimaryButton label="Approve Claim" onPress={handleApprove} />
+              <PrimaryButton
+                disabled={isApproving || isRejecting}
+                label="Approve Claim"
+                loading={isApproving}
+                onPress={handleApprove}
+              />
             </View>
             <View style={styles.actionItem}>
-              <PrimaryButton destructive label="Reject Claim" onPress={handleReject} outlined />
+              <PrimaryButton
+                destructive
+                disabled={isApproving || isRejecting}
+                label="Reject Claim"
+                loading={isRejecting}
+                onPress={handleReject}
+                outlined
+              />
             </View>
           </View>
         ) : (
