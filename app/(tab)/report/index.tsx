@@ -1,3 +1,6 @@
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -19,6 +22,7 @@ import PrivacyNotice from "@/components/privacy-notice";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { createItem, getCategories } from "@/services/items";
+import { uploadImage } from "@/services/uploads";
 import { Category, ItemType } from "@/types";
 
 export default function ReportScreen() {
@@ -30,6 +34,13 @@ export default function ReportScreen() {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [reportDate, setReportDate] = useState(new Date().toISOString().split("T")[0]);
+
+  // Image upload state
+  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [isPickingImage, setIsPickingImage] = useState<boolean>(false);
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState<boolean>(true);
@@ -66,6 +77,74 @@ export default function ReportScreen() {
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  const performUpload = async (asset: ImagePicker.ImagePickerAsset) => {
+    setIsUploadingImage(true);
+    setImageUploadError(null);
+    try {
+      const uploadResult = await uploadImage(
+        {
+          base64: asset.base64,
+          uri: asset.uri,
+          filename: asset.fileName || "item_photo.jpg",
+          mimeType: asset.mimeType || "image/jpeg",
+        },
+        currentUserId
+      );
+
+      setUploadedImageUrl(uploadResult.url);
+    } catch (err: any) {
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to upload image to cloud storage.";
+      setImageUploadError(msg);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handlePickImage = async () => {
+    setImageUploadError(null);
+    try {
+      setIsPickingImage(true);
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          "Permission Required",
+          "Please allow photo library access to upload a picture of the item."
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const selectedAsset = result.assets[0];
+      setLocalImageUri(selectedAsset.uri);
+      await performUpload(selectedAsset);
+    } catch (err: any) {
+      console.error("Image pick error:", err);
+      setImageUploadError("Unable to open photo picker. Please try again.");
+    } finally {
+      setIsPickingImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setLocalImageUri(null);
+    setUploadedImageUrl(null);
+    setImageUploadError(null);
+  };
 
   const errors = useMemo(() => {
     const errs: Record<string, string> = {};
@@ -119,6 +198,22 @@ export default function ReportScreen() {
       return;
     }
 
+    if (isUploadingImage) {
+      Alert.alert(
+        "Image Uploading",
+        "Please wait for the image upload to finish before submitting."
+      );
+      return;
+    }
+
+    if (localImageUri && imageUploadError && !uploadedImageUrl) {
+      Alert.alert(
+        "Image Upload Failed",
+        "The selected image could not be uploaded. Please retry or remove the image before submitting."
+      );
+      return;
+    }
+
     if (isSubmitting) return;
 
     setIsSubmitting(true);
@@ -131,7 +226,7 @@ export default function ReportScreen() {
           description: description.trim(),
           location: location.trim(),
           reportDate,
-          image: "placeholder.png",
+          image: uploadedImageUrl || "placeholder.png",
         },
         currentUserId
       );
@@ -144,6 +239,9 @@ export default function ReportScreen() {
       setTitle("");
       setLocation("");
       setDescription("");
+      setLocalImageUri(null);
+      setUploadedImageUrl(null);
+      setImageUploadError(null);
       setTouched({});
       setSubmitAttempted(false);
 
@@ -242,6 +340,82 @@ export default function ReportScreen() {
             </ScrollView>
           )}
 
+          {/* Item Photo Section */}
+          <Text style={styles.label}>Item Photo</Text>
+          {!localImageUri ? (
+            <TouchableOpacity
+              activeOpacity={0.75}
+              disabled={isPickingImage}
+              onPress={handlePickImage}
+              style={styles.imagePickerButton}
+            >
+              <View style={styles.imagePickerIconCircle}>
+                <Ionicons color={COLORS.primary} name="camera-outline" size={24} />
+              </View>
+              <Text style={styles.imagePickerText}>
+                {isPickingImage ? "Opening Gallery..." : "Add Item Photo"}
+              </Text>
+              <Text style={styles.imagePickerSubtext}>
+                Photos help the community verify and return items faster
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.imagePreviewWrapper}>
+              <Image
+                contentFit="cover"
+                source={{ uri: localImageUri }}
+                style={styles.imagePreview}
+                transition={200}
+              />
+
+              {isUploadingImage && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator color={COLORS.surface} size="small" />
+                  <Text style={styles.uploadingText}>Uploading to persistent storage...</Text>
+                </View>
+              )}
+
+              {imageUploadError && !isUploadingImage && (
+                <View style={styles.imageErrorBanner}>
+                  <Text style={styles.imageErrorText}>{imageUploadError}</Text>
+                  <TouchableOpacity
+                    onPress={() => localImageUri && handlePickImage()}
+                    style={styles.retryImageBtn}
+                  >
+                    <Text style={styles.retryImageBtnText}>Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {uploadedImageUrl && !isUploadingImage && (
+                <View style={styles.imageSuccessBadge}>
+                  <Ionicons color={COLORS.success} name="checkmark-circle" size={16} />
+                  <Text style={styles.imageSuccessText}>Image uploaded to persistent cloud storage</Text>
+                </View>
+              )}
+
+              <View style={styles.imageActionsRow}>
+                <TouchableOpacity
+                  disabled={isUploadingImage}
+                  onPress={handlePickImage}
+                  style={styles.changeImageButton}
+                >
+                  <Ionicons color={COLORS.primary} name="refresh-outline" size={16} />
+                  <Text style={styles.changeImageText}>Change Photo</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  disabled={isUploadingImage}
+                  onPress={handleRemoveImage}
+                  style={styles.removeImageButton}
+                >
+                  <Ionicons color={COLORS.danger} name="trash-outline" size={16} />
+                  <Text style={styles.removeImageText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           <FormField
             error={getError("location")}
             label="Location"
@@ -323,6 +497,140 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: COLORS.primary,
     fontSize: 12,
+    fontWeight: "600",
+  },
+  // Image Picker Styles
+  imagePickerButton: {
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderStyle: "dashed",
+    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: SPACING.md,
+  },
+  imagePickerIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: SPACING.sm,
+  },
+  imagePickerText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  imagePickerSubtext: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    textAlign: "center",
+  },
+  imagePreviewWrapper: {
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    backgroundColor: "#F1F5F9",
+  },
+  uploadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 200,
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
+  },
+  uploadingText: {
+    color: COLORS.surface,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  imageErrorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.dangerLight,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  imageErrorText: {
+    color: COLORS.danger,
+    fontSize: 12,
+    flex: 1,
+    marginRight: SPACING.sm,
+  },
+  retryImageBtn: {
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  retryImageBtnText: {
+    color: COLORS.danger,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  imageSuccessBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    backgroundColor: COLORS.successLight,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs + 2,
+  },
+  imageSuccessText: {
+    color: COLORS.success,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  imageActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  changeImageButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+  },
+  changeImageText: {
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  removeImageButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+  },
+  removeImageText: {
+    color: COLORS.danger,
+    fontSize: 13,
     fontWeight: "600",
   },
 });
