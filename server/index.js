@@ -10,6 +10,7 @@ const {
 
 const categoriesRoutes = require("./routes/categories.routes");
 const claimsRoutes = require("./routes/claims.routes");
+const conversationsRoutes = require("./routes/conversations.routes");
 
 const app = express();
 
@@ -18,14 +19,14 @@ app.use(cors());
 
 // Mount API Routes
 app.use("/api/claims", claimsRoutes);
+app.use("/api/categories", categoriesRoutes);
+app.use("/api/conversations", conversationsRoutes);
 
 app.get("/", (req, res) => {
   res.json({
     message: "LostLink API is running",
   });
 });
-
-app.use("/api/categories", categoriesRoutes);
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, phone, password } = req.body;
