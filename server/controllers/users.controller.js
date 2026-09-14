@@ -68,7 +68,7 @@ async function updateUserStatus(req, res) {
     }
 
     return res.status(200).json({
-      message: User  is now .,
+      message: `User ${updatedUser.name} is now ${updatedUser.status}.`,
       user: updatedUser,
     });
   } catch (error) {
