@@ -8,16 +8,22 @@ const {
   createUser,
 } = require("./data/userStore");
 
+const path = require("path");
 const categoriesRoutes = require("./routes/categories.routes");
-const claimsRoutes = require("./routes/claims.routes");
+const itemsRoutes = require("./routes/items.routes");
+const uploadsRoutes = require("./routes/uploads.routes");
+const adminRoutes = require("./routes/admin.routes");
+const usersRoutes = require("./routes/users.routes");
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+
 app.use(cors());
 
-// Mount API Routes
-app.use("/api/claims", claimsRoutes);
+// Serve uploaded media files persistently
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {
   res.json({
@@ -26,6 +32,10 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/categories", categoriesRoutes);
+app.use("/api/items", itemsRoutes);
+app.use("/api/uploads", uploadsRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/users", usersRoutes);
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, phone, password } = req.body;
