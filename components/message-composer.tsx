@@ -7,22 +7,45 @@ interface MessageComposerProps {
   value: string;
   onChangeText: (text: string) => void;
   onSend: () => void;
+  onShareLocation?: () => void;
   loading?: boolean;
+  isSharingLocation?: boolean;
 }
 
 export default function MessageComposer({
   value,
   onChangeText,
   onSend,
+  onShareLocation,
   loading = false,
+  isSharingLocation = false,
 }: MessageComposerProps) {
-  const disabled = value.trim().length === 0 || loading;
+  const disabled = value.trim().length === 0 || loading || isSharingLocation;
 
   return (
     <View style={styles.container}>
+      {onShareLocation && (
+        <TouchableOpacity
+          accessibilityHint="Fetches GPS coordinates and sends meeting spot in chat"
+          accessibilityLabel="Share current location"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isSharingLocation || loading }}
+          activeOpacity={0.7}
+          disabled={isSharingLocation || loading}
+          onPress={onShareLocation}
+          style={styles.locationButton}
+        >
+          {isSharingLocation ? (
+            <ActivityIndicator color={COLORS.primary} size="small" />
+          ) : (
+            <Ionicons color={COLORS.primary} name="location-outline" size={22} />
+          )}
+        </TouchableOpacity>
+      )}
+
       <TextInput
         accessibilityLabel="Type your message"
-        editable={!loading}
+        editable={!loading && !isSharingLocation}
         multiline
         onChangeText={onChangeText}
         placeholder="Write a message..."
@@ -59,6 +82,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: SPACING.sm,
     padding: SPACING.md,
+  },
+  locationButton: {
+    alignItems: "center",
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
+    borderRadius: 21,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
   },
   input: {
     backgroundColor: COLORS.background,

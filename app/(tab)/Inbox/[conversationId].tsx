@@ -1,3 +1,4 @@
+import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -33,6 +34,7 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSharingLocation, setIsSharingLocation] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   
   const {
@@ -171,6 +173,92 @@ export default function ChatScreen() {
     }
   };
 
+  const handleShareLocation = async () => {
+    if (!otherUser || !item || !currentUserId || isSharingLocation || isSending) return;
+
+    setIsSharingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== Location.PermissionStatus.GRANTED && status !== "granted") {
+        Alert.alert(
+          "Location Permission Denied",
+          "Permission to access device location was denied. Please enable location permissions in your device settings to share your meeting spot.",
+          [{ text: "OK" }],
+        );
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const { latitude, longitude } = loc.coords;
+      let placeName = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+      try {
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+          {
+            headers: {
+              "User-Agent": "LostLink-MobileApp/1.0 (contact@lostlink.local)",
+              Accept: "application/json",
+            },
+          },
+        );
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          if (geoData && geoData.display_name) {
+            placeName = geoData.display_name;
+          }
+        }
+      } catch (geoErr) {
+        console.log("Reverse geocoding error, falling back to coords:", geoErr);
+      }
+
+      const messageText = `📍 Shared Location:\n${placeName}\nhttps://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}`;
+
+      const response = await api.post(
+        `/api/conversations/${conversationId}/messages`,
+        {
+          itemId: item.id,
+          senderId: currentUserId,
+          receiverId: otherUser.id,
+          text: messageText,
+        },
+      );
+
+      const createdMessage: Message = response.data.data;
+
+      if (createdMessage) {
+        setConversationMessages((prev) => [...prev, createdMessage]);
+      } else {
+        const fallbackMsg: Message = {
+          id: `M${Date.now()}`,
+          conversationId,
+          itemId: item.id,
+          senderId: currentUserId,
+          receiverId: otherUser.id,
+          text: messageText,
+          sentAt: new Date().toISOString(),
+          read: false,
+        };
+        setConversationMessages((prev) => [...prev, fallbackMsg]);
+      }
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (err: any) {
+      console.error("Location share error:", err);
+      Alert.alert(
+        "Location Error",
+        "Unable to acquire your current location. Please ensure GPS is enabled and try again.",
+      );
+    } finally {
+      setIsSharingLocation(false);
+    }
+  };
+
   if (!conversationId || (!item && !isLoading) || (!otherUser && !isLoading)) {
     return (
       <SafeAreaView style={styles.screen}>
@@ -288,9 +376,11 @@ export default function ChatScreen() {
         )}
 
         <MessageComposer
+          isSharingLocation={isSharingLocation}
           loading={isSending}
           onChangeText={setDraft}
           onSend={handleSend}
+          onShareLocation={handleShareLocation}
           value={draft}
         />
       </KeyboardAvoidingView>
