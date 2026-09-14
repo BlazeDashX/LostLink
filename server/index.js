@@ -8,13 +8,16 @@ const {
   createUser,
 } = require("./data/userStore");
 
+const path = require("path");
 const categoriesRoutes = require("./routes/categories.routes");
 const claimsRoutes = require("./routes/claims.routes");
 const conversationsRoutes = require("./routes/conversations.routes");
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+
 app.use(cors());
 
 // Mount API Routes
