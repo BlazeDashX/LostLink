@@ -1,7 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import AppHeader from "@/components/app-header";
 import EmptyState from "@/components/empty-state";
@@ -10,6 +19,7 @@ import StatusBadge from "@/components/status-badge";
 import categoriesData from "@/data/categories.json";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { deleteItem } from "@/services/items";
 import { Message } from "@/types";
 
 type CategoryItem = {
@@ -20,7 +30,8 @@ type CategoryItem = {
 
 export default function ItemDetailsScreen() {
   const { id } = useLocalSearchParams() as { id: string };
-  const { claims, currentUserId, items, messages, setMessages, users } = useApp();
+  const { claims, currentUserId, items, setItems, messages, setMessages, users } = useApp();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const item = items.find((candidate) => candidate.id === id);
   const reporter = users.find((user) => user.id === item?.reporterId);
@@ -97,6 +108,50 @@ export default function ItemDetailsScreen() {
       pathname: "/report/claim/review",
       params: { claimId: currentUserClaim.id },
     } as any);
+  };
+
+  const handleDeleteReport = () => {
+    if (isDeleting) return;
+
+    Alert.alert(
+      "Delete Report?",
+      `Are you sure you want to delete "${item.title}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (isDeleting) return;
+            setIsDeleting(true);
+            try {
+              await deleteItem(item.id, currentUserId);
+              setItems((prev) => prev.filter((i) => i.id !== item.id));
+
+              Alert.alert("Deleted", "Your report has been deleted successfully.", [
+                {
+                  text: "OK",
+                  onPress: () => {
+                    if (router.canGoBack()) {
+                      router.back();
+                    } else {
+                      router.push("/feed" as any);
+                    }
+                  },
+                },
+              ]);
+            } catch (err: any) {
+              const msg =
+                err.response?.data?.message ||
+                "Failed to delete item report. Please try again.";
+              Alert.alert("Deletion Failed", msg);
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -181,6 +236,7 @@ export default function ItemDetailsScreen() {
                 </Text>
               </View>
               <PrimaryButton
+                disabled={isDeleting}
                 label="Edit Report"
                 onPress={() => {
                   router.push({
@@ -189,6 +245,22 @@ export default function ItemDetailsScreen() {
                   } as any);
                 }}
               />
+              <TouchableOpacity
+                accessibilityLabel="Delete report"
+                accessibilityRole="button"
+                disabled={isDeleting}
+                onPress={handleDeleteReport}
+                style={[styles.deleteButton, isDeleting && styles.disabledButton]}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator color={COLORS.danger} size="small" />
+                ) : (
+                  <>
+                    <Ionicons color={COLORS.danger} name="trash-outline" size={18} />
+                    <Text style={styles.deleteButtonText}>Delete Report</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           ) : (
             <>
@@ -296,4 +368,23 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
   },
   reporterNoticeText: { color: COLORS.primary, fontSize: 14, fontWeight: "600" },
+  deleteButton: {
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FCA5A5",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: SPACING.xs,
+    justifyContent: "center",
+    paddingVertical: SPACING.md,
+  },
+  deleteButtonText: {
+    color: COLORS.danger,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
 });

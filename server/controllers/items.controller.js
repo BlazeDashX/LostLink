@@ -307,8 +307,52 @@ async function updateItem(req, res) {
   }
 }
 
+/**
+ * Controller to handle DELETE /api/items/:id
+ * Verifies that the user owns the report (or is Admin),
+ * and permanently deletes the item and cascades dependent records.
+ */
+async function deleteItem(req, res) {
+  try {
+    const { id } = req.params;
+
+    // 1. Verify item exists
+    const existingItem = await itemsQueries.getItemById(id);
+    if (!existingItem) {
+      return res.status(404).json({
+        message: "Item not found or already deleted.",
+      });
+    }
+
+    // 2. Authorization: Authenticated user must own report or have Admin role
+    const isOwner = req.user.id === existingItem.reporterId;
+    const isAdmin = req.user.role === "Admin";
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({
+        message: "You are not authorized to delete this report.",
+      });
+    }
+
+    // 3. Delete from database
+    await itemsQueries.deleteItem(id);
+
+    return res.status(200).json({
+      message: "Item report deleted successfully.",
+      id,
+    });
+  } catch (error) {
+    console.error("Error deleting item:", error);
+    return res.status(500).json({
+      message: "Failed to delete item report.",
+      error: error.message,
+    });
+  }
+}
+
 module.exports = {
   createItem,
   getItem,
   updateItem,
+  deleteItem,
 };

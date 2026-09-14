@@ -103,8 +103,21 @@ async function updateItem(id, {
   return result.rows[0];
 }
 
+/**
+ * Permanently delete an item by ID from the items table.
+ * Related records in claims, conversations, and messages are cascaded via DB foreign keys.
+ * @param {string} id
+ * @returns {Promise<boolean>} True if an item was deleted
+ */
+async function deleteItem(id) {
+  const sql = `DELETE FROM items WHERE id = $1 RETURNING id`;
+  const result = await query(sql, [id]);
+  return result.rowCount > 0;
+}
+
 module.exports = {
   createItem,
   getItemById,
   updateItem,
+  deleteItem,
 };

@@ -114,3 +114,28 @@ export async function updateItem(
   });
   return response.data;
 }
+
+export interface DeleteItemResponse {
+  message: string;
+  id: string;
+}
+
+/**
+ * Permanently delete a lost/found item report using DELETE /api/items/:id.
+ * @param id Item ID to delete
+ * @param userId Authenticated user ID (sent in x-user-id header for server authorization)
+ * @returns Promise<DeleteItemResponse>
+ */
+export async function deleteItem(
+  id: string,
+  userId?: string | null
+): Promise<DeleteItemResponse> {
+  const headers: Record<string, string> = {};
+  if (userId) {
+    headers["x-user-id"] = userId;
+  }
+  const response = await api.delete<DeleteItemResponse>(`/api/items/${id}`, {
+    headers,
+  });
+  return response.data;
+}

@@ -21,7 +21,7 @@ import PrimaryButton from "@/components/primary-button";
 import PrivacyNotice from "@/components/privacy-notice";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { createItem, getCategories, getItemById, updateItem } from "@/services/items";
+import { createItem, deleteItem, getCategories, getItemById, updateItem } from "@/services/items";
 import { uploadImage } from "@/services/uploads";
 import { Category, Item, ItemType } from "@/types";
 
@@ -89,6 +89,7 @@ export default function ReportScreen() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   /** Inline error for category — shown near the chips after submit attempt */
   const [categoryError, setCategoryError] = useState<string | null>(null);
 
@@ -501,12 +502,56 @@ export default function ReportScreen() {
     }
   };
 
+  const handleDeleteReport = () => {
+    if (!activeEditId || isDeleting) return;
+
+    Alert.alert(
+      "Delete Report?",
+      "Are you sure you want to delete this report? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (isDeleting) return;
+            setIsDeleting(true);
+            try {
+              await deleteItem(activeEditId, currentUserId);
+              setItems((prev) => prev.filter((i) => i.id !== activeEditId));
+
+              Alert.alert("Deleted", "Your report has been deleted.", [
+                {
+                  text: "OK",
+                  onPress: () => {
+                    if (router.canGoBack()) {
+                      router.back();
+                    } else {
+                      router.push("/feed" as any);
+                    }
+                  },
+                },
+              ]);
+            } catch (err: any) {
+              const msg =
+                err.response?.data?.message ||
+                "Failed to delete item report. Please try again.";
+              Alert.alert("Deletion Failed", msg);
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   /**
    * The submit button is disabled (not just loading) during any async operation
-   * to prevent accidental double-taps while uploading an image or submitting.
+   * to prevent accidental double-taps while uploading an image, deleting, or submitting.
    */
   const isSubmitDisabled =
-    isSubmitting || isUploadingImage || isPickingImage || (isEditMode && isLoadingItem);
+    isSubmitting || isDeleting || isUploadingImage || isPickingImage || (isEditMode && isLoadingItem);
 
   if (isEditMode && isLoadingItem) {
     return (
@@ -752,6 +797,25 @@ export default function ReportScreen() {
           loading={isSubmitting}
           onPress={handleSubmit}
         />
+
+        {isEditMode && (
+          <TouchableOpacity
+            accessibilityLabel="Delete report"
+            accessibilityRole="button"
+            disabled={isSubmitDisabled}
+            onPress={handleDeleteReport}
+            style={[styles.deleteReportButton, isDeleting && styles.disabledButton]}
+          >
+            {isDeleting ? (
+              <ActivityIndicator color={COLORS.danger} size="small" />
+            ) : (
+              <>
+                <Ionicons color={COLORS.danger} name="trash-outline" size={18} />
+                <Text style={styles.deleteReportButtonText}>Delete Report</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -981,5 +1045,25 @@ const styles = StyleSheet.create({
     color: COLORS.surface,
     fontSize: 14,
     fontWeight: "700",
+  },
+  deleteReportButton: {
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FCA5A5",
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: SPACING.xs,
+    justifyContent: "center",
+    marginTop: SPACING.md,
+    paddingVertical: SPACING.md,
+  },
+  deleteReportButtonText: {
+    color: COLORS.danger,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });

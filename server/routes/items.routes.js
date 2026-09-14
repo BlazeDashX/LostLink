@@ -6,5 +6,6 @@ const { requireAuth } = require("../middleware/auth");
 router.post("/", requireAuth, itemsController.createItem);
 router.get("/:id", itemsController.getItem);
 router.patch("/:id", requireAuth, itemsController.updateItem);
+router.delete("/:id", requireAuth, itemsController.deleteItem);
 
 module.exports = router;
