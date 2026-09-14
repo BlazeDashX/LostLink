@@ -113,7 +113,7 @@ export default function SubmitClaimScreen() {
     );
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setSubmitAttempted(true);
     setTouched({
       identifyingDetail: true,
@@ -122,32 +122,40 @@ export default function SubmitClaimScreen() {
       handoverMethod: true,
     });
 
-    if (!isFormValid) return;
+    if (!isFormValid || isSubmitting) return;
     setIsSubmitting(true);
-    
-    const result = submitClaim({
-      itemId: item.id,
-      answers: {
-        identifyingDetail: formData.identifyingDetail,
-        lossContext: formData.lossContext,
-        privateEvidence: formData.privateEvidence,
-      },
-      handoverMethod: formData.handoverMethod,
-    });
-    
-    setIsSubmitting(false);
 
-    if (!result.ok || !result.claimId) {
-      Alert.alert("Error", result.message);
-      return;
+    try {
+      const result = await submitClaim({
+        itemId: item.id,
+        answers: {
+          identifyingDetail: formData.identifyingDetail.trim(),
+          lossContext: formData.lossContext.trim(),
+          privateEvidence: formData.privateEvidence.trim(),
+        },
+        handoverMethod: formData.handoverMethod,
+      });
+
+      if (!result.ok || !result.claimId) {
+        Alert.alert("Submission Failed", result.message);
+        return;
+      }
+
+      Alert.alert("Claim Submitted", result.message, [
+        {
+          text: "View Status",
+          onPress: () =>
+            router.replace({
+              pathname: "/report/claim/review",
+              params: { claimId: result.claimId },
+            }),
+        },
+      ]);
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "An unexpected error occurred.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    Alert.alert("Claim submitted", result.message, [
-      {
-        text: "View status",
-        onPress: () => router.replace({ pathname: "/report/claim/review", params: { claimId: result.claimId } }),
-      },
-    ]);
   };
 
   return (
