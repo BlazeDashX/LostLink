@@ -29,6 +29,8 @@ export default function ItemDetailsScreen() {
   );
 
   const isReporter = item?.reporterId === currentUserId;
+  const currentUser = users.find((user) => user.id === currentUserId);
+  const isReporterOrAdmin = isReporter || currentUser?.role === "Admin";
   const currentUserClaim = useMemo(() => {
     if (!item) return undefined;
     return claims.find(
@@ -168,12 +170,25 @@ export default function ItemDetailsScreen() {
                 onPress={handleViewClaimStatus}
               />
             </View>
-          ) : isReporter ? (
-            <View style={styles.reporterNotice}>
-              <Ionicons color={COLORS.primary} name="information-circle-outline" size={20} />
-              <Text style={styles.reporterNoticeText}>
-                You are the reporter of this item.
-              </Text>
+          ) : isReporterOrAdmin ? (
+            <View style={{ gap: SPACING.md }}>
+              <View style={styles.reporterNotice}>
+                <Ionicons color={COLORS.primary} name="information-circle-outline" size={20} />
+                <Text style={styles.reporterNoticeText}>
+                  {isReporter
+                    ? "You are the reporter of this item."
+                    : "Admin Access: You are authorized to manage this report."}
+                </Text>
+              </View>
+              <PrimaryButton
+                label="Edit Report"
+                onPress={() => {
+                  router.push({
+                    pathname: "/report",
+                    params: { editId: item.id },
+                  } as any);
+                }}
+              />
             </View>
           ) : (
             <>

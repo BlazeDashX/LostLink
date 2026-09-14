@@ -63,3 +63,54 @@ export async function createItem(
   });
   return response.data;
 }
+
+export interface UpdateItemPayload {
+  type?: ItemType;
+  title?: string;
+  categoryId?: string;
+  description?: string;
+  location?: string;
+  reportDate?: string;
+  image?: string;
+}
+
+export interface UpdateItemResponse {
+  message: string;
+  item: Item;
+}
+
+export interface ItemResponse {
+  item: Item;
+}
+
+/**
+ * Fetch a single item by its ID from the Neon PostgreSQL database via Express API.
+ * @param id Item ID
+ * @returns Promise<Item>
+ */
+export async function getItemById(id: string): Promise<Item> {
+  const response = await api.get<ItemResponse>(`/api/items/${id}`);
+  return response.data.item;
+}
+
+/**
+ * Update an existing lost/found item report using PATCH /api/items/:id.
+ * @param id Item ID
+ * @param payload Updated item data
+ * @param userId Authenticated user ID (sent in x-user-id header for server authorization)
+ * @returns Promise<UpdateItemResponse>
+ */
+export async function updateItem(
+  id: string,
+  payload: UpdateItemPayload,
+  userId?: string | null
+): Promise<UpdateItemResponse> {
+  const headers: Record<string, string> = {};
+  if (userId) {
+    headers["x-user-id"] = userId;
+  }
+  const response = await api.patch<UpdateItemResponse>(`/api/items/${id}`, payload, {
+    headers,
+  });
+  return response.data;
+}

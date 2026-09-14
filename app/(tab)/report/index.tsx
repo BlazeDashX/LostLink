@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -21,9 +21,9 @@ import PrimaryButton from "@/components/primary-button";
 import PrivacyNotice from "@/components/privacy-notice";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { createItem, getCategories } from "@/services/items";
+import { createItem, getCategories, getItemById, updateItem } from "@/services/items";
 import { uploadImage } from "@/services/uploads";
-import { Category, ItemType } from "@/types";
+import { Category, Item, ItemType } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -53,7 +53,10 @@ function isNotFutureDate(value: string): boolean {
 // ---------------------------------------------------------------------------
 
 export default function ReportScreen() {
-  const { currentUserId, setItems } = useApp();
+  const { currentUserId, currentUser, items, setItems } = useApp();
+  const searchParams = useLocalSearchParams<{ id?: string; editId?: string; itemId?: string }>();
+  const activeEditId = searchParams.editId || searchParams.itemId || searchParams.id || null;
+  const isEditMode = Boolean(activeEditId);
 
   // Form field state
   const [type, setType] = useState<ItemType>("Lost");
@@ -66,11 +69,16 @@ export default function ReportScreen() {
   // Image upload state
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [isPickingImage, setIsPickingImage] = useState<boolean>(false);
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   // Keep last picked asset so we can retry upload without re-opening the picker
   const lastPickedAssetRef = useRef<ImagePicker.ImagePickerAsset | null>(null);
+
+  // Edit mode loading state
+  const [isLoadingItem, setIsLoadingItem] = useState<boolean>(isEditMode);
+  const [itemLoadError, setItemLoadError] = useState<string | null>(null);
 
   // Category state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -93,8 +101,11 @@ export default function ReportScreen() {
       setCategories(activeList);
       if (activeList.length > 0) {
         setCategoryId((prevId) => {
-          const exists = activeList.some((cat) => cat.id === prevId);
-          return exists ? prevId : activeList[0].id;
+          if (prevId) {
+            const exists = activeList.some((cat) => cat.id === prevId);
+            if (exists) return prevId;
+          }
+          return isEditMode ? prevId : activeList[0].id;
         });
       }
     } catch (err: any) {
@@ -106,11 +117,87 @@ export default function ReportScreen() {
     } finally {
       setLoadingCategories(false);
     }
-  }, []);
+  }, [isEditMode]);
 
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  // Load existing item details when in edit mode
+  useEffect(() => {
+    if (!activeEditId) {
+      setIsLoadingItem(false);
+      return;
+    }
+
+    let isMounted = true;
+    const loadItemData = async () => {
+      setIsLoadingItem(true);
+      setItemLoadError(null);
+      try {
+        let itemData: Item | null = null;
+        try {
+          itemData = await getItemById(activeEditId);
+        } catch (apiErr) {
+          // If network error, check context cache as fallback
+          const cached = items.find((i) => i.id === activeEditId);
+          if (cached) {
+            itemData = cached;
+          } else {
+            throw apiErr;
+          }
+        }
+
+        if (!isMounted) return;
+
+        if (!itemData) {
+          setItemLoadError("The requested report could not be found.");
+          return;
+        }
+
+        // Authorization check on the client (backend also strictly verifies this)
+        const isOwner = currentUserId && itemData.reporterId === currentUserId;
+        const isAdmin = currentUser?.role === "Admin";
+        if (currentUserId && !isOwner && !isAdmin) {
+          setItemLoadError("You are not authorized to edit this report.");
+          return;
+        }
+
+        setType(itemData.type);
+        setTitle(itemData.title);
+        setCategoryId(itemData.categoryId);
+        setLocation(itemData.location);
+        setDescription(itemData.description);
+        if (itemData.reportDate) {
+          setReportDate(itemData.reportDate);
+        }
+        if (itemData.image && itemData.image !== "placeholder.png") {
+          setExistingImageUrl(itemData.image);
+          setLocalImageUri(itemData.image);
+          setUploadedImageUrl(itemData.image);
+        } else {
+          setExistingImageUrl(null);
+          setLocalImageUri(null);
+          setUploadedImageUrl(null);
+        }
+      } catch (err: any) {
+        if (!isMounted) return;
+        const msg =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to load item report. Please check your network connection.";
+        setItemLoadError(msg);
+      } finally {
+        if (isMounted) setIsLoadingItem(false);
+      }
+    };
+
+    loadItemData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeEditId, currentUserId, currentUser?.role]);
 
   const performUpload = async (asset: ImagePicker.ImagePickerAsset) => {
     setIsUploadingImage(true);
@@ -196,6 +283,7 @@ export default function ReportScreen() {
   const handleRemoveImage = () => {
     setLocalImageUri(null);
     setUploadedImageUrl(null);
+    setExistingImageUrl(null);
     setImageUploadError(null);
     lastPickedAssetRef.current = null;
   };
@@ -278,7 +366,7 @@ export default function ReportScreen() {
 
     // 3. Auth check
     if (!currentUserId) {
-      Alert.alert("Login Required", "Please log in before reporting an item.", [
+      Alert.alert("Login Required", "Please log in before reporting or editing an item.", [
         {
           text: "Log In",
           onPress: () => router.push("/(auth)/login" as any),
@@ -310,6 +398,58 @@ export default function ReportScreen() {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
+    // EDIT MODE: Call PATCH /api/items/:id
+    if (isEditMode && activeEditId) {
+      try {
+        const finalImage = uploadedImageUrl || existingImageUrl || "placeholder.png";
+        const response = await updateItem(
+          activeEditId,
+          {
+            type,
+            title: title.trim(),
+            categoryId,
+            description: description.trim(),
+            location: location.trim(),
+            reportDate: reportDate.trim(),
+            image: finalImage,
+          },
+          currentUserId
+        );
+
+        // Update shared AppContext state
+        if (response.item) {
+          setItems((prev) =>
+            prev.map((it) => (it.id === response.item.id ? response.item : it))
+          );
+        }
+
+        Alert.alert("Success", "Your item report has been updated.", [
+          {
+            text: "View Details",
+            onPress: () => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.push({
+                  pathname: "/report/item/[id]",
+                  params: { id: activeEditId },
+                } as any);
+              }
+            },
+          },
+        ]);
+      } catch (err: any) {
+        const message =
+          err.response?.data?.message ||
+          "Failed to update item report. Please try again.";
+        Alert.alert("Update Failed", message);
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // CREATE MODE: Call POST /api/items
     try {
       const response = await createItem(
         {
@@ -336,6 +476,7 @@ export default function ReportScreen() {
       setReportDate(new Date().toISOString().split("T")[0]);
       setLocalImageUri(null);
       setUploadedImageUrl(null);
+      setExistingImageUrl(null);
       setImageUploadError(null);
       lastPickedAssetRef.current = null;
       setTouched({});
@@ -364,11 +505,58 @@ export default function ReportScreen() {
    * The submit button is disabled (not just loading) during any async operation
    * to prevent accidental double-taps while uploading an image or submitting.
    */
-  const isSubmitDisabled = isSubmitting || isUploadingImage || isPickingImage;
+  const isSubmitDisabled =
+    isSubmitting || isUploadingImage || isPickingImage || (isEditMode && isLoadingItem);
+
+  if (isEditMode && isLoadingItem) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <AppHeader showBack title="Edit Report" />
+        <View style={styles.stateContainer}>
+          <ActivityIndicator color={COLORS.primary} size="large" />
+          <Text style={styles.stateLoadingText}>Loading report details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isEditMode && itemLoadError) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <AppHeader showBack title="Edit Report" />
+        <View style={styles.stateContainer}>
+          <Ionicons color={COLORS.danger} name="alert-circle-outline" size={48} />
+          <Text style={styles.stateErrorTitle}>Unable to Edit Report</Text>
+          <Text style={styles.stateErrorMessage}>{itemLoadError}</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.push("/feed" as any);
+              }
+            }}
+            style={styles.stateBackButton}
+          >
+            <Text style={styles.stateBackButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
-      <AppHeader subtitle="Report a lost or found item to the community" title="Report Item" />
+      <AppHeader
+        showBack={isEditMode}
+        subtitle={
+          isEditMode
+            ? "Update your lost or found item details"
+            : "Report a lost or found item to the community"
+        }
+        title={isEditMode ? "Edit Report" : "Report Item"}
+      />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Item Report Type</Text>
@@ -560,7 +748,7 @@ export default function ReportScreen() {
         <PrivacyNotice />
         <PrimaryButton
           disabled={isSubmitDisabled}
-          label={`Post ${type} Item Report`}
+          label={isEditMode ? "Save Changes" : `Post ${type} Item Report`}
           loading={isSubmitting}
           onPress={handleSubmit}
         />
@@ -758,5 +946,40 @@ const styles = StyleSheet.create({
     color: COLORS.danger,
     fontSize: 13,
     fontWeight: "600",
+  },
+  stateContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: SPACING.xl,
+  },
+  stateLoadingText: {
+    color: COLORS.textMuted,
+    fontSize: 15,
+    marginTop: SPACING.md,
+  },
+  stateErrorTitle: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: SPACING.md,
+  },
+  stateErrorMessage: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.lg,
+  },
+  stateBackButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.sm,
+    borderRadius: 8,
+  },
+  stateBackButtonText: {
+    color: COLORS.surface,
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
