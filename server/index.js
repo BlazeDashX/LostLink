@@ -7,6 +7,8 @@ const {
   createUser,
 } = require("./data/userStore");
 
+const categoriesRoutes = require("./routes/categories.routes");
+
 const app = express();
 
 app.use(express.json());
@@ -18,6 +20,8 @@ app.get("/", (req, res) => {
     message: "LostLink API is running",
   });
 });
+
+app.use("/api/categories", categoriesRoutes);
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, phone, password } = req.body;
