@@ -37,6 +37,7 @@ export default function AppHeader({
       {showBack ? (
         <Pressable
           accessibilityLabel="Go back"
+          accessibilityRole="button"
           onPress={handleBack}
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
         >
@@ -52,6 +53,7 @@ export default function AppHeader({
       ) : onPressNotification ? (
         <Pressable
           accessibilityLabel="Notifications"
+          accessibilityRole="button"
           onPress={onPressNotification}
           style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
         >

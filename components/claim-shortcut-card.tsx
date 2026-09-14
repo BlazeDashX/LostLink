@@ -24,7 +24,14 @@ export default function ClaimShortcutCard({
       <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.message}>{message}</Text>
-        <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={styles.action}>
+        <TouchableOpacity
+          accessibilityHint={message}
+          accessibilityLabel={actionLabel}
+          accessibilityRole="button"
+          activeOpacity={0.7}
+          onPress={onPress}
+          style={styles.action}
+        >
           <Text style={styles.actionText}>{actionLabel}</Text>
           <Ionicons color={COLORS.primary} name="arrow-forward" size={16} />
         </TouchableOpacity>
