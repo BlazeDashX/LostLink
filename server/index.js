@@ -11,6 +11,7 @@ const path = require("path");
 const categoriesRoutes = require("./routes/categories.routes");
 const itemsRoutes = require("./routes/items.routes");
 const uploadsRoutes = require("./routes/uploads.routes");
+const adminRoutes = require("./routes/admin.routes");
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.get("/", (req, res) => {
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/items", itemsRoutes);
 app.use("/api/uploads", uploadsRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, phone, password } = req.body;
