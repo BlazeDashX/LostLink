@@ -27,7 +27,7 @@ async function getAdminStats(req, res) {
     const suspendedUsers = usersData.filter((u) => u.status === "Suspended").length;
 
     // 3. Items stats — from PostgreSQL (live data)
-    const itemsResult = await query(
+    const itemsResult = await query(`
       SELECT
         COUNT(*) AS total,
         COUNT(*) FILTER (WHERE status = 'Active') AS active,
@@ -35,7 +35,7 @@ async function getAdminStats(req, res) {
         COUNT(*) FILTER (WHERE status = 'Pending Claim') AS pending_claim,
         COUNT(*) FILTER (WHERE status = 'Hidden') AS hidden
       FROM items
-    );
+    `);
     const itemsRow = itemsResult.rows[0];
 
     // 4. Claims stats — from data/claims.json (the project's actual claims store)
