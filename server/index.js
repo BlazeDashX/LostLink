@@ -90,12 +90,18 @@ app.post("/api/auth/login", async (req, res) => {
 
   let passwordMatches = false;
 
-  if (user.password.startsWith("$2")) {
-    passwordMatches = await bcrypt.compare(
-      password,
-      user.password
-    );
-  } else {
+  if (user.password && user.password.startsWith("$2")) {
+    try {
+      passwordMatches = await bcrypt.compare(
+        password,
+        user.password
+      );
+    } catch (e) {
+      console.log("bcrypt compare error:", e.message);
+    }
+  }
+
+  if (!passwordMatches && user.password) {
     passwordMatches = user.password === password;
   }
 
