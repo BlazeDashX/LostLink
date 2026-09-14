@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -25,9 +25,37 @@ import { createItem, getCategories } from "@/services/items";
 import { uploadImage } from "@/services/uploads";
 import { Category, ItemType } from "@/types";
 
+// ---------------------------------------------------------------------------
+// Validation helpers
+// ---------------------------------------------------------------------------
+
+/** Returns true if the string matches YYYY-MM-DD */
+function isValidDateFormat(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value.trim());
+}
+
+/** Returns true if the date is a real calendar date (not e.g. 2024-02-30) */
+function isRealDate(value: string): boolean {
+  const d = new Date(value.trim());
+  return !isNaN(d.getTime());
+}
+
+/** Returns true if the date is not in the future */
+function isNotFutureDate(value: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(value.trim());
+  return d <= today;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function ReportScreen() {
   const { currentUserId, setItems } = useApp();
 
+  // Form field state
   const [type, setType] = useState<ItemType>("Lost");
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -41,14 +69,20 @@ export default function ReportScreen() {
   const [isPickingImage, setIsPickingImage] = useState<boolean>(false);
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  // Keep last picked asset so we can retry upload without re-opening the picker
+  const lastPickedAssetRef = useRef<ImagePicker.ImagePickerAsset | null>(null);
 
+  // Category state
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState<boolean>(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
+  // Submission / validation state
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  /** Inline error for category — shown near the chips after submit attempt */
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   const fetchCategories = useCallback(async () => {
     setLoadingCategories(true);
@@ -91,7 +125,6 @@ export default function ReportScreen() {
         },
         currentUserId
       );
-
       setUploadedImageUrl(uploadResult.url);
     } catch (err: any) {
       const msg =
@@ -99,12 +132,17 @@ export default function ReportScreen() {
         err.message ||
         "Failed to upload image to cloud storage.";
       setImageUploadError(msg);
+      // Clear any stale URL so we never submit with an invalid image URL
+      setUploadedImageUrl(null);
     } finally {
       setIsUploadingImage(false);
     }
   };
 
   const handlePickImage = async () => {
+    // Prevent re-entry while already picking or uploading
+    if (isPickingImage || isUploadingImage) return;
+
     setImageUploadError(null);
     try {
       setIsPickingImage(true);
@@ -125,12 +163,16 @@ export default function ReportScreen() {
         base64: true,
       });
 
+      // User cancelled — no error, no state change
       if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
       const selectedAsset = result.assets[0];
+      lastPickedAssetRef.current = selectedAsset;
       setLocalImageUri(selectedAsset.uri);
+      // Reset previous URL before uploading the new asset
+      setUploadedImageUrl(null);
       await performUpload(selectedAsset);
     } catch (err: any) {
       console.error("Image pick error:", err);
@@ -140,53 +182,101 @@ export default function ReportScreen() {
     }
   };
 
+  /** Retry upload using the stored last-picked asset (no re-open of picker) */
+  const handleRetryUpload = async () => {
+    const asset = lastPickedAssetRef.current;
+    if (!asset) {
+      // No stored asset — fall back to re-opening the picker
+      await handlePickImage();
+      return;
+    }
+    await performUpload(asset);
+  };
+
   const handleRemoveImage = () => {
     setLocalImageUri(null);
     setUploadedImageUrl(null);
     setImageUploadError(null);
+    lastPickedAssetRef.current = null;
   };
 
+  /**
+   * Client-side validation mirroring the backend contract (items.controller.js).
+   * Surfaces errors before any network request. Backend remains the final authority.
+   */
   const errors = useMemo(() => {
     const errs: Record<string, string> = {};
+
+    // Title — mirrors backend: required, min 3, max 150
     if (!title.trim()) {
       errs.title = "Title is required.";
     } else if (title.trim().length < 3) {
       errs.title = "Title must be at least 3 characters.";
+    } else if (title.trim().length > 150) {
+      errs.title = "Title cannot exceed 150 characters.";
     }
 
+    // Location — mirrors backend: required, max 255
     if (!location.trim()) {
       errs.location = "Location is required.";
+    } else if (location.trim().length > 255) {
+      errs.location = "Location cannot exceed 255 characters.";
     }
 
+    // Description — mirrors backend: required, min 10
     if (!description.trim()) {
       errs.description = "Description is required.";
     } else if (description.trim().length < 10) {
       errs.description = "Description must be at least 10 characters.";
     }
 
+    // Report date — mirrors backend: required, valid date format, not future
+    if (!reportDate.trim()) {
+      errs.reportDate = "Report date is required.";
+    } else if (!isValidDateFormat(reportDate)) {
+      errs.reportDate = "Date must be in YYYY-MM-DD format.";
+    } else if (!isRealDate(reportDate)) {
+      errs.reportDate = "Please enter a valid calendar date.";
+    } else if (!isNotFutureDate(reportDate)) {
+      errs.reportDate = "Report date cannot be in the future.";
+    }
+
     return errs;
-  }, [title, location, description]);
+  }, [title, location, description, reportDate]);
 
   const isFormValid = useMemo(() => Object.keys(errors).length === 0, [errors]);
 
-  const getError = (field: string) =>
+  /** Returns the error for a field only after it has been touched or submit was attempted */
+  const getError = (field: string): string | undefined =>
     touched[field] || submitAttempted ? errors[field] : undefined;
 
+  /** Select a category and clear the inline category error */
+  const handleCategorySelect = (id: string) => {
+    setCategoryId(id);
+    if (id) setCategoryError(null);
+  };
+
   const handleSubmit = async () => {
+    // Mark all fields as touched so all inline errors become visible at once
     setSubmitAttempted(true);
     setTouched({
       title: true,
       location: true,
       description: true,
+      reportDate: true,
     });
 
+    // 1. Client-side field validation — prevents unnecessary API/upload calls
     if (!isFormValid) return;
 
+    // 2. Category check — shown inline near the chips
     if (!categoryId) {
-      Alert.alert("Category Required", "Please select a category before submitting.");
+      setCategoryError("Please select a category before submitting.");
       return;
     }
+    setCategoryError(null);
 
+    // 3. Auth check
     if (!currentUserId) {
       Alert.alert("Login Required", "Please log in before reporting an item.", [
         {
@@ -198,6 +288,7 @@ export default function ReportScreen() {
       return;
     }
 
+    // 4. Block while image is still uploading
     if (isUploadingImage) {
       Alert.alert(
         "Image Uploading",
@@ -206,6 +297,7 @@ export default function ReportScreen() {
       return;
     }
 
+    // 5. Block if an image was selected but its upload failed
     if (localImageUri && imageUploadError && !uploadedImageUrl) {
       Alert.alert(
         "Image Upload Failed",
@@ -214,9 +306,10 @@ export default function ReportScreen() {
       return;
     }
 
+    // 6. Duplicate-submission guard (idempotency lock)
     if (isSubmitting) return;
-
     setIsSubmitting(true);
+
     try {
       const response = await createItem(
         {
@@ -225,25 +318,29 @@ export default function ReportScreen() {
           categoryId,
           description: description.trim(),
           location: location.trim(),
-          reportDate,
+          reportDate: reportDate.trim(),
           image: uploadedImageUrl || "placeholder.png",
         },
         currentUserId
       );
 
+      // Update global items list with the newly created item
       if (response.item) {
         setItems((prev) => [response.item, ...prev]);
       }
 
-      // Reset form
+      // Reset form to initial state
       setTitle("");
       setLocation("");
       setDescription("");
+      setReportDate(new Date().toISOString().split("T")[0]);
       setLocalImageUri(null);
       setUploadedImageUrl(null);
       setImageUploadError(null);
+      lastPickedAssetRef.current = null;
       setTouched({});
       setSubmitAttempted(false);
+      setCategoryError(null);
 
       Alert.alert("Success", "Your item report has been published.", [
         {
@@ -252,15 +349,22 @@ export default function ReportScreen() {
         },
       ]);
     } catch (err: any) {
+      // Show the server's own message; fall back to a generic user-friendly string.
+      // Raw Node.js error strings are not exposed to the user.
       const message =
         err.response?.data?.message ||
-        err.message ||
         "Failed to post item report. Please try again.";
       Alert.alert("Submission Failed", message);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  /**
+   * The submit button is disabled (not just loading) during any async operation
+   * to prevent accidental double-taps while uploading an image or submitting.
+   */
+  const isSubmitDisabled = isSubmitting || isUploadingImage || isPickingImage;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -332,25 +436,33 @@ export default function ReportScreen() {
                   <ChoiceChip
                     key={cat.id}
                     label={cat.name}
-                    onPress={() => setCategoryId(cat.id)}
+                    onPress={() => handleCategorySelect(cat.id)}
                     selected={categoryId === cat.id}
                   />
                 ))}
               </View>
             </ScrollView>
           )}
+          {/* Inline category validation error — visible after submit attempt */}
+          {categoryError ? (
+            <Text style={styles.inlineError}>{categoryError}</Text>
+          ) : null}
 
           {/* Item Photo Section */}
           <Text style={styles.label}>Item Photo</Text>
           {!localImageUri ? (
             <TouchableOpacity
               activeOpacity={0.75}
-              disabled={isPickingImage}
+              disabled={isPickingImage || isUploadingImage}
               onPress={handlePickImage}
               style={styles.imagePickerButton}
             >
               <View style={styles.imagePickerIconCircle}>
-                <Ionicons color={COLORS.primary} name="camera-outline" size={24} />
+                {isPickingImage ? (
+                  <ActivityIndicator color={COLORS.primary} size="small" />
+                ) : (
+                  <Ionicons color={COLORS.primary} name="camera-outline" size={24} />
+                )}
               </View>
               <Text style={styles.imagePickerText}>
                 {isPickingImage ? "Opening Gallery..." : "Add Item Photo"}
@@ -379,7 +491,7 @@ export default function ReportScreen() {
                 <View style={styles.imageErrorBanner}>
                   <Text style={styles.imageErrorText}>{imageUploadError}</Text>
                   <TouchableOpacity
-                    onPress={() => localImageUri && handlePickImage()}
+                    onPress={handleRetryUpload}
                     style={styles.retryImageBtn}
                   >
                     <Text style={styles.retryImageBtnText}>Retry</Text>
@@ -396,7 +508,7 @@ export default function ReportScreen() {
 
               <View style={styles.imageActionsRow}>
                 <TouchableOpacity
-                  disabled={isUploadingImage}
+                  disabled={isUploadingImage || isPickingImage}
                   onPress={handlePickImage}
                   style={styles.changeImageButton}
                 >
@@ -405,7 +517,7 @@ export default function ReportScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  disabled={isUploadingImage}
+                  disabled={isUploadingImage || isPickingImage}
                   onPress={handleRemoveImage}
                   style={styles.removeImageButton}
                 >
@@ -426,7 +538,9 @@ export default function ReportScreen() {
           />
 
           <FormField
+            error={getError("reportDate")}
             label="Report Date (YYYY-MM-DD)"
+            onBlur={() => setTouched((p) => ({ ...p, reportDate: true }))}
             onChangeText={setReportDate}
             placeholder="YYYY-MM-DD"
             value={reportDate}
@@ -444,7 +558,12 @@ export default function ReportScreen() {
         </View>
 
         <PrivacyNotice />
-        <PrimaryButton label={`Post ${type} Item Report`} loading={isSubmitting} onPress={handleSubmit} />
+        <PrimaryButton
+          disabled={isSubmitDisabled}
+          label={`Post ${type} Item Report`}
+          loading={isSubmitting}
+          onPress={handleSubmit}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -485,6 +604,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     flex: 1,
     marginRight: SPACING.sm,
+  },
+  /** Inline validation error rendered below the category chips */
+  inlineError: {
+    color: COLORS.danger,
+    fontSize: 11,
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.md,
   },
   retryButton: {
     backgroundColor: COLORS.surface,
