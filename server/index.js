@@ -8,6 +8,7 @@ const {
 } = require("./data/userStore");
 
 const categoriesRoutes = require("./routes/categories.routes");
+const itemsRoutes = require("./routes/items.routes");
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/categories", categoriesRoutes);
+app.use("/api/items", itemsRoutes);
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, phone, password } = req.body;

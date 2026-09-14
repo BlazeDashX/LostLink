@@ -18,11 +18,11 @@ import PrimaryButton from "@/components/primary-button";
 import PrivacyNotice from "@/components/privacy-notice";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { getCategories } from "@/services/items";
+import { createItem, getCategories } from "@/services/items";
 import { Category, ItemType } from "@/types";
 
 export default function ReportScreen() {
-  const { addItem } = useApp();
+  const { currentUserId, setItems } = useApp();
 
   const [type, setType] = useState<ItemType>("Lost");
   const [title, setTitle] = useState("");
@@ -93,7 +93,7 @@ export default function ReportScreen() {
   const getError = (field: string) =>
     touched[field] || submitAttempted ? errors[field] : undefined;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setSubmitAttempted(true);
     setTouched({
       title: true,
@@ -108,29 +108,60 @@ export default function ReportScreen() {
       return;
     }
 
-    setIsSubmitting(true);
-    const result = addItem({
-      type,
-      title: title.trim(),
-      categoryId,
-      description: description.trim(),
-      location: location.trim(),
-      reportDate,
-      image: "placeholder.png",
-    });
-    setIsSubmitting(false);
-
-    if (!result.ok) {
-      Alert.alert("Error", result.message);
+    if (!currentUserId) {
+      Alert.alert("Login Required", "Please log in before reporting an item.", [
+        {
+          text: "Log In",
+          onPress: () => router.push("/(auth)/login" as any),
+        },
+        { text: "Cancel", style: "cancel" },
+      ]);
       return;
     }
 
-    Alert.alert("Success", "Your item report has been published.", [
-      {
-        text: "View in Feed",
-        onPress: () => router.push("/feed" as any),
-      },
-    ]);
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await createItem(
+        {
+          type,
+          title: title.trim(),
+          categoryId,
+          description: description.trim(),
+          location: location.trim(),
+          reportDate,
+          image: "placeholder.png",
+        },
+        currentUserId
+      );
+
+      if (response.item) {
+        setItems((prev) => [response.item, ...prev]);
+      }
+
+      // Reset form
+      setTitle("");
+      setLocation("");
+      setDescription("");
+      setTouched({});
+      setSubmitAttempted(false);
+
+      Alert.alert("Success", "Your item report has been published.", [
+        {
+          text: "View in Feed",
+          onPress: () => router.push("/feed" as any),
+        },
+      ]);
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to post item report. Please try again.";
+      Alert.alert("Submission Failed", message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

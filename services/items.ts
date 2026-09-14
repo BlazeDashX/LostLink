@@ -1,9 +1,25 @@
 import { api } from "./api";
-import { Category } from "@/types";
+import { Category, Item, ItemType } from "@/types";
 
 export interface CategoriesResponse {
   message?: string;
   categories: Category[];
+}
+
+export interface CreateItemPayload {
+  type: ItemType;
+  title: string;
+  categoryId: string;
+  description: string;
+  location: string;
+  reportDate: string;
+  image?: string;
+  reporterId?: string;
+}
+
+export interface CreateItemResponse {
+  message: string;
+  item: Item;
 }
 
 /**
@@ -26,4 +42,24 @@ export async function getCategories(activeOnly: boolean = false): Promise<Catego
   }
 
   return [];
+}
+
+/**
+ * Submit a new lost/found item report to the backend API.
+ * @param payload Item data
+ * @param userId Authenticated user ID (sent in x-user-id header)
+ * @returns Promise<CreateItemResponse>
+ */
+export async function createItem(
+  payload: CreateItemPayload,
+  userId?: string | null
+): Promise<CreateItemResponse> {
+  const headers: Record<string, string> = {};
+  if (userId) {
+    headers["x-user-id"] = userId;
+  }
+  const response = await api.post<CreateItemResponse>("/api/items", payload, {
+    headers,
+  });
+  return response.data;
 }
