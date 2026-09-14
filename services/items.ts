@@ -72,6 +72,7 @@ export interface UpdateItemPayload {
   location?: string;
   reportDate?: string;
   image?: string;
+  status?: string;
 }
 
 export interface UpdateItemResponse {
@@ -157,6 +158,26 @@ export async function getMyReports(userId?: string | null): Promise<Item[]> {
   }
   const response = await api.get<MyReportsResponse>("/api/items", {
     params: { mine: "true" },
+    headers,
+  });
+  return response.data.items ?? [];
+}
+
+export interface AllItemsResponse {
+  items: Item[];
+}
+
+/**
+ * Fetch all items from the database (Admin only).
+ * @param userId Authenticated admin user ID (sent in x-user-id header)
+ * @returns Promise<Item[]>
+ */
+export async function getAllItems(userId?: string | null): Promise<Item[]> {
+  const headers: Record<string, string> = {};
+  if (userId) {
+    headers["x-user-id"] = userId;
+  }
+  const response = await api.get<AllItemsResponse>("/api/items", {
     headers,
   });
   return response.data.items ?? [];

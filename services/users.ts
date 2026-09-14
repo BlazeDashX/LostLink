@@ -1,4 +1,4 @@
-﻿import { api } from "./api";
+import { api } from "./api";
 import { User, UserStatus } from "../types";
 
 export interface UsersResponse {
@@ -40,7 +40,7 @@ export async function updateUserStatus(
     headers["x-user-id"] = adminId;
   }
   const response = await api.patch<UpdateUserResponse>(
-    /api/users/,
+    `/api/users/${targetUserId}`,
     { status },
     { headers }
   );

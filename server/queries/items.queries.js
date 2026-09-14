@@ -73,6 +73,7 @@ async function updateItem(id, {
   location,
   reportDate,
   image,
+  status,
 }) {
   const sql = `
     UPDATE items
@@ -82,7 +83,8 @@ async function updateItem(id, {
         description = COALESCE($5, description),
         location = COALESCE($6, location),
         report_date = COALESCE($7, report_date),
-        image = COALESCE($8, image)
+        image = COALESCE($8, image),
+        status = COALESCE($9, status)
     WHERE id = $1
     RETURNING id, type, title, category_id AS "categoryId", description, location,
               TO_CHAR(report_date, 'YYYY-MM-DD') AS "reportDate",
@@ -98,6 +100,7 @@ async function updateItem(id, {
     location !== undefined ? location : null,
     reportDate !== undefined ? reportDate : null,
     image !== undefined ? image : null,
+    status !== undefined ? status : null,
   ];
   const result = await query(sql, values);
   return result.rows[0];
@@ -134,10 +137,28 @@ async function getItemsByReporter(reporterId) {
   return result.rows;
 }
 
+/**
+ * Retrieve all items from the items table (Admin only).
+ * @returns {Promise<Array<Object>>} List of items formatted with camelCase properties
+ */
+async function getAllItems() {
+  const sql = `
+    SELECT id, type, title, category_id AS "categoryId", description, location,
+           TO_CHAR(report_date, 'YYYY-MM-DD') AS "reportDate",
+           image, reporter_id AS "reporterId", status,
+           created_at AS "createdAt"
+    FROM items
+    ORDER BY created_at DESC
+  `;
+  const result = await query(sql);
+  return result.rows;
+}
+
 module.exports = {
   createItem,
   getItemById,
   updateItem,
   deleteItem,
   getItemsByReporter,
+  getAllItems,
 };

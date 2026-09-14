@@ -1,4 +1,4 @@
-﻿// screens/AdminManagementScreen.tsx
+// screens/AdminManagementScreen.tsx
 // SRS 13.17 — Admin Management Screen
 import React, { useMemo, useState, useCallback } from "react";
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
@@ -6,6 +6,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import { User, Item } from "@/types";
 import { getAllUsers, updateUserStatus } from "@/services/users";
+import { getAllItems, updateItem } from "@/services/items";
 
 const COLORS = {
   primary: "#2563EB",
@@ -39,6 +40,12 @@ export default function AdminManagementScreen() {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Items data from backend
+  const [backendItems, setBackendItems] = useState<Item[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [itemsError, setItemsError] = useState<string | null>(null);
+  const [isUpdatingItem, setIsUpdatingItem] = useState(false);
+
   const fetchUsers = useCallback(async () => {
     setIsLoadingUsers(true);
     setUsersError(null);
@@ -52,19 +59,46 @@ export default function AdminManagementScreen() {
     }
   }, [currentUserId]);
 
+  const fetchItems = useCallback(async () => {
+    setIsLoadingItems(true);
+    setItemsError(null);
+    try {
+      const data = await getAllItems(currentUserId);
+      setBackendItems(data);
+    } catch (err: any) {
+      setItemsError(err?.response?.data?.message ?? "Failed to load items.");
+    } finally {
+      setIsLoadingItems(false);
+    }
+  }, [currentUserId]);
+
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       async function load() {
         setIsLoadingUsers(true);
+        setIsLoadingItems(true);
         setUsersError(null);
+        setItemsError(null);
         try {
-          const data = await getAllUsers(currentUserId);
-          if (!cancelled) setBackendUsers(data);
+          const [usersData, itemsData] = await Promise.all([
+            getAllUsers(currentUserId),
+            getAllItems(currentUserId),
+          ]);
+          if (!cancelled) {
+            setBackendUsers(usersData);
+            setBackendItems(itemsData);
+          }
         } catch (err: any) {
-          if (!cancelled) setUsersError(err?.response?.data?.message ?? "Failed to load users.");
+          if (!cancelled) {
+            setUsersError(err?.response?.data?.message ?? "Failed to load data.");
+            setItemsError(err?.response?.data?.message ?? "Failed to load data.");
+          }
         } finally {
-          if (!cancelled) setIsLoadingUsers(false);
+          if (!cancelled) {
+            setIsLoadingUsers(false);
+            setIsLoadingItems(false);
+          }
         }
       }
       load();
@@ -79,8 +113,8 @@ export default function AdminManagementScreen() {
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((i) => !q || i.title.toLowerCase().includes(q) || i.id.toLowerCase().includes(q));
-  }, [items, query]);
+    return backendItems.filter((i) => !q || i.title.toLowerCase().includes(q) || i.id.toLowerCase().includes(q));
+  }, [backendItems, query]);
 
   const filteredClaims = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -141,6 +175,8 @@ export default function AdminManagementScreen() {
   }
 
   function toggleItemVisibility(item: Item) {
+    if (isUpdatingItem) return;
+
     const nextStatus = item.status === "Hidden" ? "Active" : "Hidden";
 
     Alert.alert(
@@ -151,8 +187,16 @@ export default function AdminManagementScreen() {
         {
           text: "Confirm",
           style: nextStatus === "Hidden" ? "destructive" : "default",
-          onPress: () => {
-            setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: nextStatus } : i)));
+          onPress: async () => {
+            setIsUpdatingItem(true);
+            try {
+              const res = await updateItem(item.id, { status: nextStatus }, currentUserId);
+              setBackendItems((prev) => prev.map((i) => (i.id === item.id ? res.item : i)));
+            } catch (err: any) {
+              Alert.alert("Error", err?.response?.data?.message ?? "Failed to update item visibility.");
+            } finally {
+              setIsUpdatingItem(false);
+            }
           },
         },
       ]
@@ -238,10 +282,25 @@ export default function AdminManagementScreen() {
           data={filteredItems}
           keyExtractor={(i) => i.id}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            isLoadingItems ? (
+              <View style={styles.loadingState}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Loading items...</Text>
+              </View>
+            ) : itemsError ? (
+              <View style={styles.errorState}>
+                <Text style={styles.errorText}>{itemsError}</Text>
+                <TouchableOpacity onPress={fetchItems} style={styles.retryButton}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
           renderItem={({ item }) => {
             const badge = badgeStyle(item.status);
             return (
-              <TouchableOpacity style={styles.row} onPress={() => toggleItemVisibility(item)}>
+              <TouchableOpacity style={styles.row} onPress={() => toggleItemVisibility(item)} disabled={isUpdatingItem}>
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{item.title.slice(0, 2).toUpperCase()}</Text>
                 </View>

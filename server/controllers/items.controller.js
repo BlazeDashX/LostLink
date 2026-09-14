@@ -194,6 +194,7 @@ async function updateItem(req, res) {
       reportDate,
       report_date,
       image,
+      status, // Admin only
     } = req.body;
 
     const selectedCategoryId = categoryId !== undefined ? categoryId : category_id;
@@ -283,6 +284,21 @@ async function updateItem(req, res) {
       }
     }
 
+    // Admin status validation
+    if (status !== undefined) {
+      if (!isAdmin) {
+        return res.status(403).json({
+          message: "Only administrators can update item status/visibility directly.",
+        });
+      }
+      const validStatuses = ["Active", "Pending Claim", "Reserved", "Delivered", "Received", "Solved", "Hidden"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          message: "Invalid status value.",
+        });
+      }
+    }
+
     // 4. Update the item (reporter_id is strictly preserved and cannot be changed)
     const updatedItem = await itemsQueries.updateItem(id, {
       type: type !== undefined ? type : existingItem.type,
@@ -292,6 +308,7 @@ async function updateItem(req, res) {
       location: location !== undefined ? location.trim() : existingItem.location,
       reportDate: selectedReportDate !== undefined ? selectedReportDate : existingItem.reportDate,
       image: image !== undefined ? image : existingItem.image,
+      status: status !== undefined ? status : existingItem.status,
     });
 
     return res.status(200).json({
@@ -316,16 +333,20 @@ async function getItems(req, res) {
   try {
     const { mine } = req.query;
 
-    if (mine !== "true") {
-      return res.status(400).json({
-        message: "Only mine=true is supported for this endpoint.",
-      });
+    if (mine === "true") {
+      const reporterId = req.user.id;
+      const items = await itemsQueries.getItemsByReporter(reporterId);
+      return res.status(200).json({ items });
     }
 
-    const reporterId = req.user.id;
-    const items = await itemsQueries.getItemsByReporter(reporterId);
+    if (req.user.role === "Admin") {
+      const items = await itemsQueries.getAllItems();
+      return res.status(200).json({ items });
+    }
 
-    return res.status(200).json({ items });
+    return res.status(403).json({
+      message: "Forbidden. Only mine=true or Admin role is supported.",
+    });
   } catch (error) {
     console.error("Error fetching user items:", error);
     return res.status(500).json({
