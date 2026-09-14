@@ -9,31 +9,49 @@ interface ConversationRowProps {
   onPress: (conversationId: string) => void;
 }
 
-const formatTime = (isoDate: string) =>
-  new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(isoDate));
+const formatTime = (isoDate?: string) => {
+  if (!isoDate) return "";
+  try {
+    return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(isoDate));
+  } catch {
+    return "";
+  }
+};
 
 export default function ConversationRow({ thread, onPress }: ConversationRowProps) {
+  const participantName = thread.participant?.name || "User";
+  const itemTitle = thread.item?.title || "Item";
+  const messagePreview = thread.latestMessage?.text || "No messages yet";
+  const sentTime = formatTime(thread.latestMessage?.sentAt);
+
+  const a11yLabel = `Conversation with ${participantName} regarding ${itemTitle}. Latest message: ${messagePreview}.${
+    thread.unreadCount > 0 ? ` ${thread.unreadCount} unread.` : ""
+  }`;
+
   return (
     <TouchableOpacity
+      accessibilityHint="Opens chat conversation"
+      accessibilityLabel={a11yLabel}
+      accessibilityRole="button"
       activeOpacity={0.7}
       onPress={() => onPress(thread.conversationId)}
       style={styles.container}
     >
       <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{thread.participant.name.charAt(0).toUpperCase()}</Text>
+        <Text style={styles.avatarText}>{participantName.charAt(0).toUpperCase()}</Text>
       </View>
       <View style={styles.content}>
         <View style={styles.topRow}>
-          <Text numberOfLines={1} style={styles.name}>{thread.participant.name}</Text>
-          <Text style={styles.time}>{formatTime(thread.latestMessage.sentAt)}</Text>
+          <Text numberOfLines={1} style={styles.name}>{participantName}</Text>
+          {sentTime ? <Text style={styles.time}>{sentTime}</Text> : null}
         </View>
-        <Text numberOfLines={1} style={styles.itemTitle}>{thread.item.title}</Text>
+        <Text numberOfLines={1} style={styles.itemTitle}>{itemTitle}</Text>
         <View style={styles.bottomRow}>
           <Text
             numberOfLines={1}
             style={[styles.preview, thread.unreadCount > 0 && styles.previewUnread]}
           >
-            {thread.latestMessage.text}
+            {messagePreview}
           </Text>
           {thread.unreadCount > 0 ? (
             <View style={styles.unreadBadge}>
