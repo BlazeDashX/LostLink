@@ -91,6 +91,6 @@ export interface ConversationThread {
   conversationId: string;
   item: Item;
   participant: User;
-  latestMessage: Message;
+  latestMessage: Message | null;
   unreadCount: number;
 }
