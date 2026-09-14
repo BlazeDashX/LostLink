@@ -1,11 +1,11 @@
-// screens/AdminManagementScreen.tsx
+﻿// screens/AdminManagementScreen.tsx
 // SRS 13.17 — Admin Management Screen
-// Adjust the AppContext import path below to match your project.
-import React, { useMemo, useState } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { useRouter } from "expo-router";
+import React, { useMemo, useState, useCallback } from "react";
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import { User, Item } from "@/types";
+import { getAllUsers, updateUserStatus } from "@/services/users";
 
 const COLORS = {
   primary: "#2563EB",
@@ -28,16 +28,54 @@ type Tab = "Users" | "Items" | "Claims";
 
 export default function AdminManagementScreen() {
   const router = useRouter();
-  const { currentUserId, users, setUsers, items, setItems, claims } = useApp();
+  const { currentUserId, items, setItems, claims } = useApp();
 
   const [tab, setTab] = useState<Tab>("Users");
   const [query, setQuery] = useState("");
 
-  // SRS 13.17.6 — search/filter local records (case-insensitive)
+  // Users data from backend
+  const [backendUsers, setBackendUsers] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const fetchUsers = useCallback(async () => {
+    setIsLoadingUsers(true);
+    setUsersError(null);
+    try {
+      const data = await getAllUsers(currentUserId);
+      setBackendUsers(data);
+    } catch (err: any) {
+      setUsersError(err?.response?.data?.message ?? "Failed to load users.");
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  }, [currentUserId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      async function load() {
+        setIsLoadingUsers(true);
+        setUsersError(null);
+        try {
+          const data = await getAllUsers(currentUserId);
+          if (!cancelled) setBackendUsers(data);
+        } catch (err: any) {
+          if (!cancelled) setUsersError(err?.response?.data?.message ?? "Failed to load users.");
+        } finally {
+          if (!cancelled) setIsLoadingUsers(false);
+        }
+      }
+      load();
+      return () => { cancelled = true; };
+    }, [currentUserId])
+  );
+
   const filteredUsers = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return users.filter((u) => !q || u.name.toLowerCase().includes(q) || u.id.toLowerCase().includes(q));
-  }, [users, query]);
+    return backendUsers.filter((u) => !q || u.name.toLowerCase().includes(q) || u.id.toLowerCase().includes(q));
+  }, [backendUsers, query]);
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -69,13 +107,12 @@ export default function AdminManagementScreen() {
     }
   }
 
-  // SRS 13.17.10 — current admin cannot suspend own active session.
-  // SRS 13.17.4 — every destructive change requires confirmation (Alert).
   function toggleUserStatus(user: User) {
     if (user.id === currentUserId) {
       Alert.alert("Not allowed", "You cannot suspend your own active session.");
       return;
     }
+    if (isUpdating) return;
 
     const nextStatus = user.status === "Active" ? "Suspended" : "Active";
 
@@ -87,16 +124,22 @@ export default function AdminManagementScreen() {
         {
           text: "Confirm",
           style: nextStatus === "Suspended" ? "destructive" : "default",
-          onPress: () => {
-            // SRS 9.3 — immutable update
-            setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, status: nextStatus } : u)));
+          onPress: async () => {
+            setIsUpdating(true);
+            try {
+              const res = await updateUserStatus(currentUserId, user.id, nextStatus as "Active" | "Suspended");
+              setBackendUsers((prev) => prev.map((u) => (u.id === user.id ? res.user : u)));
+            } catch (err: any) {
+              Alert.alert("Error", err?.response?.data?.message ?? "Failed to update user status.");
+            } finally {
+              setIsUpdating(false);
+            }
           },
         },
       ]
     );
   }
 
-  // SRS 13.17.10 — hidden items disappear from public discovery lists
   function toggleItemVisibility(item: Item) {
     const nextStatus = item.status === "Hidden" ? "Active" : "Hidden";
 
@@ -120,7 +163,7 @@ export default function AdminManagementScreen() {
     <View style={styles.screen}>
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backArrow}>{"‹"}</Text>
+          <Text style={styles.backArrow}>{"<"}</Text>
         </TouchableOpacity>
         <Text style={styles.header}>Admin Management</Text>
       </View>
@@ -152,12 +195,26 @@ export default function AdminManagementScreen() {
           data={filteredUsers}
           keyExtractor={(u) => u.id}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            isLoadingUsers ? (
+              <View style={styles.loadingState}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Loading users...</Text>
+              </View>
+            ) : usersError ? (
+              <View style={styles.errorState}>
+                <Text style={styles.errorText}>{usersError}</Text>
+                <TouchableOpacity onPress={fetchUsers} style={styles.retryButton}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
           renderItem={({ item: user }) => {
             const statusLabel = user.role === "Admin" ? "Admin" : user.status;
             const badge = badgeStyle(statusLabel);
             return (
-              // SRS 13.17.9 — Suspend/activate action on row tap
-              <TouchableOpacity style={styles.row} onPress={() => toggleUserStatus(user)}>
+              <TouchableOpacity style={styles.row} onPress={() => toggleUserStatus(user)} disabled={isUpdating}>
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{initials(user.name)}</Text>
                 </View>
@@ -184,7 +241,6 @@ export default function AdminManagementScreen() {
           renderItem={({ item }) => {
             const badge = badgeStyle(item.status);
             return (
-              // SRS 13.17.9 — Hide/restore action on row tap
               <TouchableOpacity style={styles.row} onPress={() => toggleItemVisibility(item)}>
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{item.title.slice(0, 2).toUpperCase()}</Text>
@@ -212,7 +268,6 @@ export default function AdminManagementScreen() {
           renderItem={({ item: claim }) => {
             const badge = badgeStyle(claim.status);
             return (
-              // SRS 13.17.7 — row -> related claim review
               <TouchableOpacity
                 style={styles.row}
                 onPress={() => router.push({ pathname: "/report/claim/review" as any, params: { claimId: claim.id } })}
@@ -235,7 +290,6 @@ export default function AdminManagementScreen() {
         />
       )}
 
-      {/* SRS mockup footer notice */}
       <View style={styles.footerNotice}>
         <Text style={styles.footerNoticeTitle}>Destructive actions require Alert confirmation.</Text>
         <Text style={styles.footerNoticeSubtitle}>Changes remain in memory until the app restarts.</Text>
@@ -274,51 +328,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 12,
   },
-  avatar: { 
-    width: 40, 
-    height: 40,
-     borderRadius: 20,
-      backgroundColor: COLORS.primaryLight, 
-      alignItems: "center",
-       justifyContent: "center" },
-
-  avatarText: { fontSize: 12, 
-    fontWeight: "700", 
-    color: COLORS.primaryDark },
-
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primaryLight, alignItems: "center", justifyContent: "center" },
+  avatarText: { fontSize: 12, fontWeight: "700", color: COLORS.primaryDark },
   rowBody: { flex: 1 },
-
-  rowTitle: { fontSize: 14,
-     fontWeight: "700", 
-     color: COLORS.text },
-
-  rowSubtitle: { 
-    fontSize: 12, 
-    color: COLORS.subtext, 
-    marginTop: 2 },
-
-  badge: { 
-    paddingHorizontal: 10, 
-    paddingVertical: 5, 
-    borderRadius: 12 },
-
-  badgeText: { 
-    fontSize: 11,
-     fontWeight: "700" },
-
-  footerNotice: { backgroundColor: COLORS.amberLight, 
-    marginHorizontal: 20,
-    marginBottom: 20, 
-    borderRadius: 14, 
-    padding: 16 },
-
-  footerNoticeTitle: { 
-    fontSize: 12, 
-    fontWeight: "700", 
-    color: "#92400E" },
-
-  footerNoticeSubtitle: { 
-    fontSize: 12,
-     color: "#92400E", 
-     marginTop: 4 },
+  rowTitle: { fontSize: 14, fontWeight: "700", color: COLORS.text },
+  rowSubtitle: { fontSize: 12, color: COLORS.subtext, marginTop: 2 },
+  badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
+  badgeText: { fontSize: 11, fontWeight: "700" },
+  footerNotice: { backgroundColor: COLORS.amberLight, marginHorizontal: 20, marginBottom: 20, borderRadius: 14, padding: 16 },
+  footerNoticeTitle: { fontSize: 12, fontWeight: "700", color: "#92400E" },
+  footerNoticeSubtitle: { fontSize: 12, color: "#92400E", marginTop: 4 },
+  loadingState: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 24, gap: 8 },
+  loadingText: { fontSize: 13, color: COLORS.subtext },
+  errorState: { alignItems: "center", paddingVertical: 16, paddingHorizontal: 20 },
+  errorText: { fontSize: 13, color: COLORS.red, textAlign: "center" },
+  retryButton: { marginTop: 10, paddingHorizontal: 24, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: COLORS.primary },
+  retryText: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
 });
