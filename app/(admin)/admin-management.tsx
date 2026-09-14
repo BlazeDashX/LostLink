@@ -206,7 +206,7 @@ export default function AdminManagementScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
           <Text style={styles.backArrow}>{"<"}</Text>
         </TouchableOpacity>
         <Text style={styles.header}>Admin Management</Text>
@@ -218,6 +218,9 @@ export default function AdminManagementScreen() {
             key={t}
             style={[styles.tabButton, tab === t && styles.tabButtonActive]}
             onPress={() => setTab(t)}
+            accessibilityRole="tab"
+            accessibilityLabel={`${t} tab`}
+            accessibilityState={{ selected: tab === t }}
           >
             <Text style={[styles.tabButtonText, tab === t && styles.tabButtonTextActive]}>{t}</Text>
           </TouchableOpacity>
@@ -248,7 +251,7 @@ export default function AdminManagementScreen() {
             ) : usersError ? (
               <View style={styles.errorState}>
                 <Text style={styles.errorText}>{usersError}</Text>
-                <TouchableOpacity onPress={fetchUsers} style={styles.retryButton}>
+                <TouchableOpacity onPress={fetchUsers} style={styles.retryButton} accessibilityRole="button" accessibilityLabel="Retry loading users">
                   <Text style={styles.retryText}>Retry</Text>
                 </TouchableOpacity>
               </View>
@@ -258,7 +261,13 @@ export default function AdminManagementScreen() {
             const statusLabel = user.role === "Admin" ? "Admin" : user.status;
             const badge = badgeStyle(statusLabel);
             return (
-              <TouchableOpacity style={styles.row} onPress={() => toggleUserStatus(user)} disabled={isUpdating}>
+              <TouchableOpacity 
+                style={styles.row} 
+                onPress={() => toggleUserStatus(user)} 
+                disabled={isUpdating}
+                accessibilityRole="button"
+                accessibilityLabel={`Toggle status for ${user.name}`}
+              >
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{initials(user.name)}</Text>
                 </View>
@@ -291,7 +300,7 @@ export default function AdminManagementScreen() {
             ) : itemsError ? (
               <View style={styles.errorState}>
                 <Text style={styles.errorText}>{itemsError}</Text>
-                <TouchableOpacity onPress={fetchItems} style={styles.retryButton}>
+                <TouchableOpacity onPress={fetchItems} style={styles.retryButton} accessibilityRole="button" accessibilityLabel="Retry loading items">
                   <Text style={styles.retryText}>Retry</Text>
                 </TouchableOpacity>
               </View>
@@ -300,7 +309,13 @@ export default function AdminManagementScreen() {
           renderItem={({ item }) => {
             const badge = badgeStyle(item.status);
             return (
-              <TouchableOpacity style={styles.row} onPress={() => toggleItemVisibility(item)} disabled={isUpdatingItem}>
+              <TouchableOpacity 
+                style={styles.row} 
+                onPress={() => toggleItemVisibility(item)} 
+                disabled={isUpdatingItem}
+                accessibilityRole="button"
+                accessibilityLabel={`Toggle visibility for item ${item.title}`}
+              >
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{item.title.slice(0, 2).toUpperCase()}</Text>
                 </View>
