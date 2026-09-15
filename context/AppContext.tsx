@@ -39,6 +39,14 @@ interface ActionResponse {
   user?: SafeUser;
 }
 
+/*
+ * users.json is only a temporary local seed source.
+ * The password field is removed before users enter client state.
+ */
+type LocalUser = User & {
+  password?: string;
+};
+
 interface AppContextType {
   currentUserId: string | null;
   currentUser: SafeUser | null;
@@ -111,8 +119,8 @@ export function AppProvider({
 
   useEffect(() => {
     setUsers(
-      (usersData as User[]).map(
-        ({ password, ...user }) => user
+      (usersData as LocalUser[]).map(
+        ({ password: _password, ...user }) => user
       )
     );
 
