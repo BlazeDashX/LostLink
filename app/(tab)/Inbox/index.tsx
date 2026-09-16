@@ -17,7 +17,7 @@ import EmptyState from "@/components/empty-state";
 import SearchBar from "@/components/search-bar";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { api } from "@/services/api";
+import { getConversations } from "@/services/conversations";
 import { ConversationThread } from "@/types";
 
 export default function InboxScreen() {
@@ -46,8 +46,7 @@ export default function InboxScreen() {
       setError(null);
 
       try {
-        const response = await api.get(`/api/conversations?userId=${currentUserId}`);
-        const data: ConversationThread[] = response.data.conversations || [];
+        const data = await getConversations(currentUserId);
         setThreads(data);
       } catch (err: any) {
         console.error("Error fetching conversations:", err);

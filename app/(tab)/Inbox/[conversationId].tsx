@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -22,7 +23,15 @@ import MessageComposer from "@/components/message-composer";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { api } from "@/services/api";
-import { Message } from "@/types";
+import {
+  findOrCreateConversation,
+  getConversationDetails,
+  getMessages,
+  markAsRead,
+  sendMessage as apiSendMessage,
+} from "@/services/conversations";
+import { getItemById } from "@/services/items";
+import { Item, Message, SafeUser } from "@/types";
 
 export default function ChatScreen() {
   const { conversationId, itemId: paramItemId } = useLocalSearchParams() as {
@@ -33,48 +42,166 @@ export default function ChatScreen() {
   const [conversationMessages, setConversationMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isSharingLocation, setIsSharingLocation] = useState(false);
+
+  // Standalone metadata for empty/new conversations
+  const [metaItem, setMetaItem] = useState<Item | null>(null);
+  const [metaOtherUser, setMetaOtherUser] = useState<SafeUser | null>(null);
+
   const flatListRef = useRef<FlatList>(null);
-  
-  const {
-    claims,
-    currentUserId,
-    items,
-    users,
-  } = useApp();
+
+  const { claims, currentUserId, items, users } = useApp();
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
 
   const loadMessages = useCallback(
     async (isRefresh = false) => {
-      if (!conversationId) return;
+      if (!conversationId) {
+        setIsLoading(false);
+        setError("Invalid conversation ID.");
+        return;
+      }
 
       if (isRefresh) {
         setIsRefreshing(true);
       } else {
         setIsLoading(true);
       }
+      setError(null);
 
       try {
-        const response = await api.get(`/api/conversations/${conversationId}/messages`);
-        const msgs: Message[] = response.data.messages || [];
+        // 1. Fetch messages via service
+        const msgs = await getMessages(conversationId, currentUserId);
         setConversationMessages(msgs);
 
-        // Mark unread messages as read on server
+        // 2. Mark unread messages as read
         if (currentUserId) {
-          api
-            .patch(`/api/conversations/${conversationId}/read`, {
-              userId: currentUserId,
+          markAsRead(conversationId, currentUserId)
+            .then(() => {
+              // Locally mark received messages as read
+              setConversationMessages((prev) =>
+                prev.map((m) =>
+                  m.receiverId === currentUserId ? { ...m, read: true } : m
+                )
+              );
             })
-            .catch((e) => console.log("Mark read error:", e.message));
+            .catch((e) => console.log("Mark read notice:", e.message));
+        }
+
+        // 3. Fetch conversation details to populate thread header & metadata
+        try {
+          const conv = await getConversationDetails(conversationId, currentUserId);
+          if (conv) {
+            const otherId =
+              conv.participant_one_id === currentUserId
+                ? conv.participant_two_id
+                : conv.participant_one_id;
+
+            const resolvedUser = users.find((u) => u.id === otherId);
+            if (resolvedUser) {
+              setMetaOtherUser(resolvedUser);
+            } else {
+              setMetaOtherUser({
+                id: otherId,
+                name:
+                  conv.participant_one_id === otherId
+                    ? conv.p1_name || "User"
+                    : conv.p2_name || "User",
+                email: "N/A",
+                phone: "N/A",
+                role: "User",
+                status: "Active",
+                avatar:
+                  conv.participant_one_id === otherId
+                    ? conv.p1_avatar || ""
+                    : conv.p2_avatar || "",
+              });
+            }
+
+            if (conv.item_id) {
+              const existingItem = items.find((i) => i.id === conv.item_id);
+              if (existingItem) {
+                setMetaItem(existingItem);
+              } else {
+                try {
+                  const fetchedItem = await getItemById(conv.item_id);
+                  setMetaItem(fetchedItem);
+                } catch {
+                  // Fallback item from conv join
+                  setMetaItem({
+                    id: conv.item_id,
+                    title: conv.item_title || "Reported Item",
+                    type: conv.item_type || "Lost",
+                    status: conv.item_status || "Active",
+                    categoryId: "",
+                    description: "",
+                    location: "",
+                    reportDate: "",
+                    image: conv.item_image || "",
+                    reporterId: conv.item_reporter_id || "",
+                    createdAt: "",
+                  });
+                }
+              }
+            }
+          }
+        } catch (convErr) {
+          console.log("Could not load thread metadata:", convErr);
         }
       } catch (err: any) {
         console.error("Error loading chat messages:", err);
+
+        // Auto-recovery if conversationId was a client-side mock or not found
+        if (err.response?.status === 404 && paramItemId && currentUserId) {
+          try {
+            const targetItem =
+              items.find((i) => i.id === paramItemId) ||
+              (await getItemById(paramItemId));
+            if (
+              targetItem &&
+              targetItem.reporterId &&
+              targetItem.reporterId !== currentUserId
+            ) {
+              const res = await findOrCreateConversation(
+                targetItem.id,
+                currentUserId,
+                targetItem.reporterId,
+                currentUserId
+              );
+              if (res?.conversation?.id && res.conversation.id !== conversationId) {
+                router.replace({
+                  pathname: "/Inbox/[conversationId]",
+                  params: {
+                    conversationId: res.conversation.id,
+                    itemId: targetItem.id,
+                  },
+                } as any);
+                return;
+              }
+            }
+          } catch (autoErr) {
+            console.log("Auto-recovery conversation failed:", autoErr);
+          }
+        }
+
+        setError(
+          err.response?.data?.message ||
+            "Unable to load chat messages. Please check your connection."
+        );
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [conversationId, currentUserId],
+    [conversationId, currentUserId, items, paramItemId, users]
   );
 
   useEffect(() => {
@@ -83,23 +210,42 @@ export default function ChatScreen() {
 
   const activeMessage = conversationMessages[0];
 
-  const item = useMemo(() => {
+  const item: Item | undefined = useMemo(() => {
+    if (metaItem) return metaItem;
     if (activeMessage?.itemId) {
-      return items.find((candidate) => candidate.id === activeMessage.itemId);
+      const found = items.find((candidate) => candidate.id === activeMessage.itemId);
+      if (found) return found;
     }
     if (paramItemId) {
       return items.find((candidate) => candidate.id === paramItemId);
     }
     return undefined;
-  }, [activeMessage, items, paramItemId]);
+  }, [activeMessage, items, metaItem, paramItemId]);
 
-  const otherUser = useMemo(() => {
+  const otherUser: SafeUser | undefined = useMemo(() => {
+    if (metaOtherUser) return metaOtherUser;
     if (activeMessage) {
       const otherUserId =
         activeMessage.senderId === currentUserId
           ? activeMessage.receiverId
           : activeMessage.senderId;
-      return users.find((user) => user.id === otherUserId);
+      const found = users.find((user) => user.id === otherUserId);
+      if (found) return found;
+      return {
+        id: otherUserId,
+        name:
+          activeMessage.senderId === currentUserId
+            ? (activeMessage as any).receiverName || "User"
+            : (activeMessage as any).senderName || "User",
+        email: "N/A",
+        phone: "N/A",
+        role: "User",
+        status: "Active",
+        avatar:
+          activeMessage.senderId === currentUserId
+            ? (activeMessage as any).receiverAvatar || ""
+            : (activeMessage as any).senderAvatar || "",
+      };
     }
     if (item) {
       const otherUserId =
@@ -107,40 +253,40 @@ export default function ChatScreen() {
       return users.find((user) => user.id === otherUserId);
     }
     return undefined;
-  }, [activeMessage, currentUserId, item, users]);
+  }, [activeMessage, currentUserId, item, metaOtherUser, users]);
 
   const pendingClaim = useMemo(() => {
     if (!item) return undefined;
     return claims.find(
-      (claim) => claim.itemId === item.id && claim.status === "Pending",
+      (claim) => claim.itemId === item.id && claim.status === "Pending"
     );
   }, [claims, item]);
 
   const currentUserClaim = useMemo(() => {
     if (!item) return undefined;
     return claims.find(
-      (claim) => claim.itemId === item.id && claim.claimantId === currentUserId,
+      (claim) => claim.itemId === item.id && claim.claimantId === currentUserId
     );
   }, [claims, currentUserId, item]);
 
   const handleSend = async () => {
-    if (!draft.trim() || !otherUser || !item || !currentUserId || isSending) return;
+    if (!draft.trim() || !otherUser || !item || !currentUserId || isSending)
+      return;
 
     const messageText = draft.trim();
     setIsSending(true);
 
     try {
-      const response = await api.post(
-        `/api/conversations/${conversationId}/messages`,
+      const createdMessage = await apiSendMessage(
+        conversationId,
         {
           itemId: item.id,
           senderId: currentUserId,
           receiverId: otherUser.id,
           text: messageText,
         },
+        currentUserId
       );
-
-      const createdMessage: Message = response.data.data;
 
       if (createdMessage) {
         setConversationMessages((prev) => [...prev, createdMessage]);
@@ -163,10 +309,10 @@ export default function ChatScreen() {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch (err: any) {
-      Alert.alert(
+      showAlert(
         "Failed to send message",
         err.response?.data?.message ||
-          "Could not send your message. Please check your connection and try again.",
+          "Could not send your message. Please check your connection and try again."
       );
     } finally {
       setIsSending(false);
@@ -174,16 +320,16 @@ export default function ChatScreen() {
   };
 
   const handleShareLocation = async () => {
-    if (!otherUser || !item || !currentUserId || isSharingLocation || isSending) return;
+    if (!otherUser || !item || !currentUserId || isSharingLocation || isSending)
+      return;
 
     setIsSharingLocation(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== Location.PermissionStatus.GRANTED && status !== "granted") {
-        Alert.alert(
+        showAlert(
           "Location Permission Denied",
-          "Permission to access device location was denied. Please enable location permissions in your device settings to share your meeting spot.",
-          [{ text: "OK" }],
+          "Permission to access device location was denied. Please enable location permissions in your device settings to share your meeting spot."
         );
         return;
       }
@@ -203,7 +349,7 @@ export default function ChatScreen() {
               "User-Agent": "LostLink-MobileApp/1.0 (contact@lostlink.local)",
               Accept: "application/json",
             },
-          },
+          }
         );
         if (geoRes.ok) {
           const geoData = await geoRes.json();
@@ -217,17 +363,16 @@ export default function ChatScreen() {
 
       const messageText = `📍 Shared Location:\n${placeName}\nhttps://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}`;
 
-      const response = await api.post(
-        `/api/conversations/${conversationId}/messages`,
+      const createdMessage = await apiSendMessage(
+        conversationId,
         {
           itemId: item.id,
           senderId: currentUserId,
           receiverId: otherUser.id,
           text: messageText,
         },
+        currentUserId
       );
-
-      const createdMessage: Message = response.data.data;
 
       if (createdMessage) {
         setConversationMessages((prev) => [...prev, createdMessage]);
@@ -250,14 +395,38 @@ export default function ChatScreen() {
       }, 100);
     } catch (err: any) {
       console.error("Location share error:", err);
-      Alert.alert(
+      showAlert(
         "Location Error",
-        "Unable to acquire your current location. Please ensure GPS is enabled and try again.",
+        "Unable to acquire your current location. Please ensure GPS is enabled and try again."
       );
     } finally {
       setIsSharingLocation(false);
     }
   };
+
+  // Error UI with Retry button
+  if (error && !isLoading && conversationMessages.length === 0) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <AppHeader showBack title="Conversation" />
+        <View style={styles.centerLoading}>
+          <EmptyState
+            icon="alert-circle-outline"
+            message={error}
+            title="Chat Unavailable"
+          />
+          <TouchableOpacity
+            accessibilityLabel="Retry loading messages"
+            accessibilityRole="button"
+            onPress={() => loadMessages(false)}
+            style={styles.retryButton}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!conversationId || (!item && !isLoading) || (!otherUser && !isLoading)) {
     return (
@@ -345,7 +514,7 @@ export default function ChatScreen() {
           <FlatList
             contentContainerStyle={styles.messageList}
             data={conversationMessages}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(msg) => msg.id}
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
               <EmptyState
@@ -425,5 +594,17 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontSize: 13,
     marginTop: SPACING.md,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

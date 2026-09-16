@@ -116,6 +116,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setClaims(claimsData as Claim[]);
     setNotifications(notificationsData as Notification[]);
 
+    // Automatically sync initial item statuses with claims
+    const initialClaims = claimsData as Claim[];
+    setItems((prevItems) =>
+      prevItems.map((item) => {
+        const matchingClaims = initialClaims.filter((c) => c.itemId === item.id);
+        if (matchingClaims.some((c) => c.status === "Completed")) {
+          return { ...item, status: "Solved" };
+        }
+        if (matchingClaims.some((c) => c.status === "Approved")) {
+          return { ...item, status: "Reserved" };
+        }
+        if (matchingClaims.some((c) => c.status === "Pending") && item.status === "Active") {
+          return { ...item, status: "Pending Claim" };
+        }
+        return item;
+      })
+    );
+
     const restoreSession = async () => {
       try {
         const savedUserId = await AsyncStorage.getItem(
@@ -200,6 +218,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.log("Failed to clear session:", error);
     }
   };
+
+  // Automatically synchronize item statuses when claims state changes
+  useEffect(() => {
+    if (claims.length === 0) return;
+    setItems((prevItems) => {
+      let changed = false;
+      const updated = prevItems.map((item) => {
+        const itemClaims = claims.filter((c) => c.itemId === item.id);
+        if (itemClaims.length === 0) return item;
+
+        let derived = item.status;
+        if (itemClaims.some((c) => c.status === "Completed")) {
+          derived = "Solved";
+        } else if (itemClaims.some((c) => c.status === "Approved")) {
+          derived = "Reserved";
+        } else if (itemClaims.some((c) => c.status === "Pending") && item.status === "Active") {
+          derived = "Pending Claim";
+        }
+
+        if (derived !== item.status) {
+          changed = true;
+          return { ...item, status: derived };
+        }
+        return item;
+      });
+      return changed ? updated : prevItems;
+    });
+  }, [claims]);
 
   const isAuthenticated = currentUserId !== null;
   const currentUser: SafeUser | null =

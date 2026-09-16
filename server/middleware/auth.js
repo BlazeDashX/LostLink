@@ -9,7 +9,13 @@ async function requireAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
     const headerUserId = req.headers["x-user-id"];
-    const bodyUserId = req.body?.reporterId;
+    const bodyUserId =
+      req.body?.reporterId ||
+      req.body?.claimantId ||
+      req.body?.senderId ||
+      req.body?.userId ||
+      req.body?.reviewedBy ||
+      req.query?.userId;
 
     let userId = null;
     if (headerUserId) {

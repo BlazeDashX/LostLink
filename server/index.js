@@ -12,6 +12,7 @@ const path = require("path");
 const categoriesRoutes = require("./routes/categories.routes");
 const claimsRoutes = require("./routes/claims.routes");
 const conversationsRoutes = require("./routes/conversations.routes");
+const uploadsRoutes = require("./routes/uploads.routes");
 
 const app = express();
 
@@ -20,10 +21,17 @@ app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 app.use(cors());
 
+// Serve static uploaded files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // Mount API Routes
 app.use("/api/claims", claimsRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/conversations", conversationsRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/items", itemsRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/uploads", uploadsRoutes);
 
 app.get("/", (req, res) => {
   res.json({
@@ -145,8 +153,8 @@ app.post(
   }
 );
 
-app.listen(3000, () => {
-  console.log(
-    "LostLink server is running on port 3000"
-  );
+const PORT = Number(process.env.PORT) || 3000;
+
+app.listen(PORT, () => {
+  console.log(`LostLink server is running on port ${PORT}`);
 });
