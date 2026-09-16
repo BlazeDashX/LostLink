@@ -2,6 +2,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
+const usersRoutes = require("./routes/users.routes");
+const itemsRoutes = require("./routes/items.routes");
+const adminRoutes = require("./routes/admin.routes");
 
 const {
   findUserByEmail,
@@ -144,7 +147,13 @@ app.post(
       });
     }
 
-    const user = await findUserByEmail(email);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Valid email is required",
+      });
+    }
 
     return res.status(200).json({
       message:

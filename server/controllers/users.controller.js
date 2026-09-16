@@ -14,9 +14,13 @@ async function getUsers(req, res) {
     }
 
     const users = await usersQueries.getAllUsers();
-    return res.status(200).json({ users });
+
+    return res.status(200).json({
+      users,
+    });
   } catch (error) {
     console.error("Error fetching users:", error);
+
     return res.status(500).json({
       message: "Failed to fetch users.",
       error: error.message,
@@ -25,41 +29,128 @@ async function getUsers(req, res) {
 }
 
 /**
- * Controller to handle PATCH /api/users/:id
- * Toggles a user's status between Active and Suspended — admin only.
- * Guards:
- *   - Only Admin role may call this endpoint.
- *   - An admin cannot suspend their own account.
- *   - Only 'Active' and 'Suspended' are accepted status values.
+ * Controller to handle GET /api/users/:id
+ * Returns a single user without password — authenticated users.
  */
-async function updateUserStatus(req, res) {
+async function getUserById(req, res) {
   try {
-    // 1. Backend authorization: only Admin role
-    if (!req.user || req.user.role !== "Admin") {
-      return res.status(403).json({
-        message: "Forbidden. Admin role required.",
+    const { id } = req.params;
+
+    const user = await usersQueries.getUserById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
+
+    return res.status(200).json({
+      data: user,
+    });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+
+    return res.status(500).json({
+      message: "Failed to fetch user.",
+    });
+  }
+}
+
+/**
+ * Controller to handle PATCH /api/users/:id
+ *
+ * Supports two types of updates:
+ *
+ * 1. Admin status update:
+ *    { status: "Active" | "Suspended" }
+ *
+ * 2. User profile update:
+ *    { name, phone, avatar }
+ */
+async function updateUser(req, res) {
+  try {
+    // Authentication check
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Authentication required.",
       });
     }
 
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, name, phone, avatar } = req.body;
 
-    // 2. Validate status value — only the existing project statuses
-    if (!status || !["Active", "Suspended"].includes(status)) {
-      return res.status(400).json({
-        message: "Status must be 'Active' or 'Suspended'.",
+    // --------------------------------------------------
+    // ADMIN STATUS UPDATE
+    // --------------------------------------------------
+
+    if (status !== undefined) {
+      // Only Admin can change user status
+      if (req.user.role !== "Admin") {
+        return res.status(403).json({
+          message: "Forbidden. Admin role required.",
+        });
+      }
+
+      // Validate status
+      if (!["Active", "Suspended"].includes(status)) {
+        return res.status(400).json({
+          message: "Status must be 'Active' or 'Suspended'.",
+        });
+      }
+
+      // Admin cannot change their own status
+      if (id === req.user.id) {
+        return res.status(400).json({
+          message: "You cannot change the status of your own account.",
+        });
+      }
+
+      // Update status in database
+      const updatedUser = await usersQueries.updateUserStatus(id, status);
+
+      if (!updatedUser) {
+        return res.status(404).json({
+          message: "User not found.",
+        });
+      }
+
+      return res.status(200).json({
+        message: `User ${updatedUser.name} is now ${updatedUser.status}.`,
+        user: updatedUser,
       });
     }
 
-    // 3. Prevent admin from suspending their own active session
-    if (id === req.user.id) {
-      return res.status(400).json({
-        message: "You cannot change the status of your own account.",
+    // --------------------------------------------------
+    // PROFILE UPDATE
+    // --------------------------------------------------
+
+    // Users can update only their own profile
+    if (req.user.id !== id) {
+      return res.status(403).json({
+        message: "You can only update your own profile.",
       });
     }
 
-    // 4. Apply update
-    const updatedUser = await usersQueries.updateUserStatus(id, status);
+    // Validate name
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        message: "Name is required.",
+      });
+    }
+
+    // Validate phone
+    if (!phone || !phone.trim()) {
+      return res.status(400).json({
+        message: "Phone number is required.",
+      });
+    }
+
+    // Update profile in database
+    const updatedUser = await usersQueries.updateUserProfile(id, {
+      name: name.trim(),
+      phone: phone.trim(),
+      avatar: avatar || "",
+    });
 
     if (!updatedUser) {
       return res.status(404).json({
@@ -68,19 +159,20 @@ async function updateUserStatus(req, res) {
     }
 
     return res.status(200).json({
-      message: User  is now .,
+      message: "Profile updated successfully.",
       user: updatedUser,
     });
   } catch (error) {
-    console.error("Error updating user status:", error);
+    console.error("Error updating user:", error);
+
     return res.status(500).json({
-      message: "Failed to update user status.",
-      error: error.message,
+      message: "Failed to update user.",
     });
   }
 }
 
 module.exports = {
   getUsers,
-  updateUserStatus,
+  getUserById,
+  updateUser,
 };

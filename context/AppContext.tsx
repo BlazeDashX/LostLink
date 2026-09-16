@@ -39,9 +39,18 @@ interface ActionResponse {
   user?: SafeUser;
 }
 
+/*
+ * users.json is only a temporary local seed source.
+ * The password field is removed before users enter client state.
+ */
+type LocalUser = User & {
+  password?: string;
+};
+
 interface AppContextType {
   currentUserId: string | null;
   currentUser: SafeUser | null;
+
   setCurrentUserId: React.Dispatch<
     React.SetStateAction<string | null>
   >;
@@ -84,12 +93,16 @@ interface AppContextType {
     password: string
   ) => Promise<ActionResponse>;
 
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
-export function AppProvider({ children }: { children: ReactNode }) {
+export function AppProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(
     null
   );
@@ -106,8 +119,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setUsers(
-      (usersData as User[]).map(
-        ({ password, ...user }) => user
+      (usersData as LocalUser[]).map(
+        ({ password: _password, ...user }) => user
       )
     );
 
@@ -140,11 +153,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
           "currentUserId"
         );
 
-        if (savedUserId) {
-          setCurrentUserId(savedUserId);
+        if (!savedUserId) {
+          return;
         }
+
+        const response = await api.get(
+          `/api/users/${savedUserId}`,
+          {
+            headers:{
+              "x-user-id": savedUserId,
+            },
+          }
+        );
+
+        const restoredUser = response.data.data;
+
+        setUsers((prev) => {
+          const userExists = prev.some(
+            (user) => user.id === restoredUser.id
+          );
+
+          if (userExists) {
+            return prev.map((user) =>
+              user.id === restoredUser.id
+                ? {
+                    ...user,
+                    ...restoredUser,
+                  }
+                : user
+            );
+          }
+
+          return [...prev, restoredUser];
+        });
+
+        setCurrentUserId(restoredUser.id);
       } catch (error) {
-        console.log("Failed to restore session:", error);
+        console.log(
+          "Failed to restore session:",
+          error
+        );
+
+        await AsyncStorage.removeItem("currentUserId");
+        setCurrentUserId(null);
       } finally {
         setAuthLoading(false);
       }
@@ -213,9 +264,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await AsyncStorage.removeItem("currentUserId");
+
       setCurrentUserId(null);
     } catch (error) {
-      console.log("Failed to clear session:", error);
+      console.log(
+        "Failed to clear session:",
+        error
+      );
     }
   };
 
@@ -248,8 +303,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [claims]);
 
   const isAuthenticated = currentUserId !== null;
+
   const currentUser: SafeUser | null =
-    users.find((user) => user.id === currentUserId) ?? null;
+    users.find(
+      (user) => user.id === currentUserId
+    ) ?? null;
 
   const submitClaim = async (
     data: SubmitClaimData
@@ -411,7 +469,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getClaimById = (
     claimId: string
   ): Claim | undefined => {
-    return claims.find((c) => c.id === claimId);
+    return claims.find(
+      (c) => c.id === claimId
+    );
   };
 
   const addItem = (
@@ -428,18 +488,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     const newItem: Item = {
-      id: `I${String(items.length + 1).padStart(3, "0")}`,
+      id: `I${String(
+        items.length + 1
+      ).padStart(3, "0")}`,
       ...data,
       reporterId: currentUserId,
       status: "Active",
       createdAt: new Date().toISOString(),
     };
 
-    setItems((prev) => [newItem, ...prev]);
+    setItems((prev) => [
+      newItem,
+      ...prev,
+    ]);
 
     return {
       ok: true,
-      message: "Item reported successfully.",
+      message:
+        "Item reported successfully.",
       claimId: newItem.id,
     };
   };
@@ -447,7 +513,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getClaimsByItem = (
     itemId: string
   ): Claim[] => {
-    return claims.filter((c) => c.itemId === itemId);
+    return claims.filter(
+      (c) => c.itemId === itemId
+    );
   };
 
   return (
@@ -487,7 +555,9 @@ export function useApp() {
   const context = useContext(AppContext);
 
   if (!context) {
-    throw new Error("useApp must be used inside AppProvider.");
+    throw new Error(
+      "useApp must be used inside AppProvider."
+    );
   }
 
   return context;

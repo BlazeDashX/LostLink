@@ -6,7 +6,10 @@ const { requireAuth } = require("../middleware/auth");
 // GET /api/users — list all users (admin only)
 router.get("/", requireAuth, usersController.getUsers);
 
+// GET /api/users/:id — get a single user
+router.get("/:id", requireAuth, usersController.getUserById);
+
 // PATCH /api/users/:id — update user status (admin only)
-router.patch("/:id", requireAuth, usersController.updateUserStatus);
+router.patch("/:id", requireAuth, usersController.updateUser);
 
 module.exports = router;
