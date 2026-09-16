@@ -73,8 +73,44 @@ async function updateUserStatus(id, status) {
   return result.rows[0] || null;
 }
 
+/**
+ * Update a user's profile information.
+ * Password, role and status are never changed here.
+ * @param {string} id - User ID
+ * @param {Object} profile - Editable profile fields
+ * @returns {Promise<Object|null>} Updated safe user or null if not found
+ */
+async function updateUserProfile(id, profile) {
+  const sql = `
+    UPDATE users
+    SET
+      name = $2,
+      phone = $3,
+      avatar = $4
+    WHERE id = $1
+    RETURNING
+      id,
+      name,
+      email,
+      phone,
+      role,
+      status,
+      avatar
+  `;
+
+  const result = await query(sql, [
+    id,
+    profile.name,
+    profile.phone,
+    profile.avatar || "",
+  ]);
+
+  return result.rows[0] || null;
+}
+
 module.exports = {
   getAllUsers,
   getUserById,
+  updateUserProfile,
   updateUserStatus,
 };

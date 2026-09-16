@@ -10,6 +10,6 @@ router.get("/", requireAuth, usersController.getUsers);
 router.get("/:id", requireAuth, usersController.getUserById);
 
 // PATCH /api/users/:id — update user status (admin only)
-router.patch("/:id", requireAuth, usersController.updateUserStatus);
+router.patch("/:id", requireAuth, usersController.updateUser);
 
 module.exports = router;
