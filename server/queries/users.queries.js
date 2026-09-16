@@ -24,6 +24,31 @@ async function getAllUsers() {
 }
 
 /**
+ * Retrieve a single user by ID from the PostgreSQL users table.
+ * Passwords are never selected.
+ * @param {string} id - User ID
+ * @returns {Promise<Object|null>} Safe user or null if not found
+ */
+async function getUserById(id) {
+  const sql = `
+    SELECT
+      id,
+      name,
+      email,
+      phone,
+      role,
+      status,
+      avatar
+    FROM users
+    WHERE id = $1
+    LIMIT 1
+  `;
+
+  const result = await query(sql, [id]);
+  return result.rows[0] || null;
+}
+
+/**
  * Update a user's status field by ID.
  * @param {string} id - User ID
  * @param {string} status - New status value ('Active' | 'Suspended')
@@ -50,5 +75,6 @@ async function updateUserStatus(id, status) {
 
 module.exports = {
   getAllUsers,
+  getUserById,
   updateUserStatus,
 };

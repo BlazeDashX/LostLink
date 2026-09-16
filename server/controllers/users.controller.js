@@ -25,6 +25,33 @@ async function getUsers(req, res) {
 }
 
 /**
+ * Controller to handle GET /api/users/:id
+ * Returns a single user without password — authenticated users.
+ */
+async function getUserById(req, res) {
+  try {
+    const { id } = req.params;
+
+    const user = await usersQueries.getUserById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
+
+    return res.status(200).json({
+      data: user,
+    });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return res.status(500).json({
+      message: "Failed to fetch user.",
+    });
+  }
+}
+
+/**
  * Controller to handle PATCH /api/users/:id
  * Toggles a user's status between Active and Suspended — admin only.
  * Guards:
@@ -82,5 +109,6 @@ async function updateUserStatus(req, res) {
 
 module.exports = {
   getUsers,
+  getUserById,
   updateUserStatus,
 };

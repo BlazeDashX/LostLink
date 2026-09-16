@@ -140,7 +140,12 @@ export function AppProvider({
         }
 
         const response = await api.get(
-          `/api/users/${savedUserId}`
+          `/api/users/${savedUserId}`,
+          {
+            headers:{
+              "x-user-id": savedUserId,
+            },
+          }
         );
 
         const restoredUser = response.data.data;
