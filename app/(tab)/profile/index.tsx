@@ -172,12 +172,7 @@ export default function ProfileScreen() {
             icon="help-circle-outline"
             title="Help & Rules"
             subtitle="Privacy and safe handover guidance"
-            onPress={() =>
-              Alert.alert(
-                "Help & Rules",
-                "Help and rules content will be connected next."
-              )
-            }
+            onPress={() => router.push("/profile/help-rules" as any)}
           />
         </View>
 
