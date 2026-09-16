@@ -1,6 +1,9 @@
 export type UserRole = "User" | "Admin";
+
 export type UserStatus = "Active" | "Suspended";
+
 export type ItemType = "Lost" | "Found";
+
 export type ItemStatus =
   | "Active"
   | "Pending Claim"
@@ -27,7 +30,6 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   avatar: string;
-  password?: string;
 }
 
 export type SafeUser = User;

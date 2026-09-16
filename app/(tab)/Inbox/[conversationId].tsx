@@ -179,7 +179,7 @@ export default function ChatScreen() {
     setIsSharingLocation(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== Location.PermissionStatus.GRANTED && status !== "granted") {
+      if (status !== Location.PermissionStatus.GRANTED) {
         Alert.alert(
           "Location Permission Denied",
           "Permission to access device location was denied. Please enable location permissions in your device settings to share your meeting spot.",

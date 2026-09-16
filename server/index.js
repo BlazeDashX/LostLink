@@ -2,6 +2,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
+const usersRoutes = require("./routes/users.routes");
+const itemsRoutes = require("./routes/items.routes");
+const adminRoutes = require("./routes/admin.routes");
 
 const {
   findUserByEmail,
@@ -24,6 +27,9 @@ app.use(cors());
 app.use("/api/claims", claimsRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/conversations", conversationsRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/items", itemsRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.get("/", (req, res) => {
   res.json({
@@ -136,7 +142,13 @@ app.post(
       });
     }
 
-    const user = await findUserByEmail(email);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Valid email is required",
+      });
+    }
 
     return res.status(200).json({
       message:

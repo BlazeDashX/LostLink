@@ -1,6 +1,11 @@
 import { api } from "./api";
 import { User, UserStatus } from "../types";
 
+export interface UpdateProfileResponse {
+  message: string;
+  user: User;
+}
+
 export interface UsersResponse {
   users: User[];
 }
@@ -44,5 +49,31 @@ export async function updateUserStatus(
     { status },
     { headers }
   );
+  return response.data;
+}
+
+/**
+ * Update the authenticated user's profile.
+ * @param userId Authenticated user ID
+ * @param profile Editable profile information
+ */
+export async function updateUserProfile(
+  userId: string,
+  profile: {
+    name: string;
+    phone: string;
+    avatar?: string;
+  }
+): Promise<UpdateProfileResponse> {
+  const response = await api.patch<UpdateProfileResponse>(
+    `/api/users/${userId}`,
+    profile,
+    {
+      headers: {
+        "x-user-id": userId,
+      },
+    }
+  );
+
   return response.data;
 }

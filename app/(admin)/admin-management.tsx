@@ -30,6 +30,7 @@ type Tab = "Users" | "Items" | "Claims";
 export default function AdminManagementScreen() {
   const router = useRouter();
   const { currentUserId, items, setItems, claims } = useApp();
+  console.log("ADMIN MANAGEMENT - claims:", claims);
 
   const [tab, setTab] = useState<Tab>("Users");
   const [query, setQuery] = useState("");
@@ -51,6 +52,7 @@ export default function AdminManagementScreen() {
     setUsersError(null);
     try {
       const data = await getAllUsers(currentUserId);
+      console.log("ADMIN - users API response:", data);
       setBackendUsers(data);
     } catch (err: any) {
       setUsersError(err?.response?.data?.message ?? "Failed to load users.");
@@ -85,6 +87,8 @@ export default function AdminManagementScreen() {
             getAllUsers(currentUserId),
             getAllItems(currentUserId),
           ]);
+          console.log("ADMIN - usersData:", usersData);
+          console.log("ADMIN - itemsData:", itemsData);
           if (!cancelled) {
             setBackendUsers(usersData);
             setBackendItems(itemsData);

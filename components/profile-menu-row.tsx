@@ -1,4 +1,9 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
@@ -19,6 +24,9 @@ export default function ProfileMenuRow({
       style={styles.container}
       activeOpacity={0.8}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityHint={`Opens ${title}`}
     >
       <View style={styles.iconContainer}>
         <Ionicons
@@ -50,10 +58,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: "#F3F4F6",
-
     justifyContent: "center",
     alignItems: "center",
-
     marginRight: 14,
   },
 

@@ -1,15 +1,12 @@
 import { useState } from "react";
 
 import {
-  Alert,
-  Platform,
   View,
   StyleSheet,
   Text,
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
-
 import { Ionicons } from "@expo/vector-icons";
 
 import FormField from "@/components/FormField";
@@ -18,47 +15,27 @@ import PrimaryButton from "@/components/PrimaryButton";
 import { COLORS } from "@/constants/colors";
 
 import { router } from "expo-router";
-
 import { api } from "@/services/api";
-
-const showAlert = (
-  title: string,
-  message: string,
-  onPress?: () => void
-) => {
-  if (Platform.OS === "web") {
-    window.alert(`${title}\n\n${message}`);
-
-    if (onPress) {
-      onPress();
-    }
-
-    return;
-  }
-
-  Alert.alert(
-    title,
-    message,
-    [
-      {
-        text: "OK",
-        onPress,
-      },
-    ]
-  );
-};
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
-
   const [loading, setLoading] = useState(false);
 
+  const [feedback, setFeedback] = useState<{
+    title: string;
+    message: string;
+    success: boolean;
+  } | null>(null);
+
   const handleReset = async () => {
+    setFeedback(null);
+
     if (!email.trim()) {
-      showAlert(
-        "Missing Information",
-        "Please enter your email."
-      );
+      setFeedback({
+        title: "Missing Information",
+        message: "Please enter your email.",
+        success: false,
+      });
       return;
     }
 
@@ -66,10 +43,11 @@ export default function ForgotPasswordScreen() {
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailRegex.test(email.trim())) {
-      showAlert(
-        "Invalid Email",
-        "Please enter a valid email."
-      );
+      setFeedback({
+        title: "Invalid Email",
+        message: "Please enter a valid email.",
+        success: false,
+      });
       return;
     }
 
@@ -83,20 +61,21 @@ export default function ForgotPasswordScreen() {
         }
       );
 
-      showAlert(
-        "Reset Request",
-        response.data.message,
-        () => router.replace("/(auth)/login")
-      );
+      setFeedback({
+        title: "Reset Request",
+        message: response.data.message,
+        success: true,
+      });
     } catch (error: any) {
       const message =
         error.response?.data?.message ||
         "Something went wrong. Please try again.";
 
-      showAlert(
-        "Request Failed",
-        message
-      );
+      setFeedback({
+        title: "Request Failed",
+        message,
+        success: false,
+      });
     } finally {
       setLoading(false);
     }
@@ -120,8 +99,41 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.subtitle}>
           Enter the email used in the simulated account.
           {"\n"}
-          LostLink will show a confirmation alert.
+          LostLink will show a confirmation message.
         </Text>
+
+        {feedback ? (
+          <View
+            style={[
+              styles.feedbackContainer,
+              feedback.success
+                ? styles.successFeedback
+                : styles.errorFeedback,
+            ]}
+          >
+            <Text style={styles.feedbackTitle}>
+              {feedback.title}
+            </Text>
+
+            <Text style={styles.feedbackMessage}>
+              {feedback.message}
+            </Text>
+
+            {feedback.success ? (
+              <PrimaryButton
+                title="Continue to Login"
+                onPress={() =>
+                  router.replace("/(auth)/login")
+                }
+              />
+            ) : (
+              <PrimaryButton
+                title="Dismiss"
+                onPress={() => setFeedback(null)}
+              />
+            )}
+          </View>
+        ) : null}
 
         <FormField
           label="Email"
@@ -137,6 +149,7 @@ export default function ForgotPasswordScreen() {
           title="Send Reset Instruction"
           onPress={handleReset}
           loading={loading}
+          disabled={!!feedback}
         />
 
         <Text style={styles.note}>
@@ -184,6 +197,37 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     marginBottom: 36,
+  },
+
+  feedbackContainer: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
+  },
+
+  successFeedback: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#16A34A",
+  },
+
+  errorFeedback: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#DC2626",
+  },
+
+  feedbackTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: 6,
+  },
+
+  feedbackMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
   },
 
   note: {
