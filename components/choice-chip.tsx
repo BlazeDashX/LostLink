@@ -11,6 +11,9 @@ interface ChoiceChipProps {
 export default function ChoiceChip({ label, selected, onPress }: ChoiceChipProps) {
   return (
     <TouchableOpacity
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
       activeOpacity={0.7}
       onPress={onPress}
       style={[styles.chip, selected && styles.chipSelected]}

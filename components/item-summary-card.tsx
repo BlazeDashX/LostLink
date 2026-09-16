@@ -22,7 +22,9 @@ export default function ItemSummaryCard({ item, onPress }: ItemSummaryCardProps)
 
   return (
     <Pressable
+      accessibilityHint="Opens detailed item view"
       accessibilityLabel={`View details for ${item.title}`}
+      accessibilityRole="button"
       onPress={handlePress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >

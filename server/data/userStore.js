@@ -1,6 +1,8 @@
 const db = require("../db");
 
 async function findUserByEmail(email) {
+  if (!email) return null;
+
   const result = await db.query(
     `
       SELECT
@@ -49,7 +51,7 @@ async function createUser(user) {
     [
       user.id,
       user.name,
-      user.email,
+      user.email.toLowerCase().trim(),
       user.password,
       user.phone,
       user.role,
@@ -61,7 +63,4 @@ async function createUser(user) {
   return result.rows[0];
 }
 
-module.exports = {
-  findUserByEmail,
-  createUser,
-};
+module.exports = { findUserByEmail, createUser };

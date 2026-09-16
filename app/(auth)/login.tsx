@@ -22,15 +22,15 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    setErrorMessage(null);
     if (!email.trim() || !password.trim()) {
-      Alert.alert(
-        "Missing Information",
-        "Please enter both email and password."
-      );
+      const msg = "Please enter both email and password.";
+      setErrorMessage(msg);
+      Alert.alert("Missing Information", msg);
       return;
     }
 
@@ -43,6 +43,7 @@ export default function LoginScreen() {
       );
 
       if (!result.ok) {
+        setErrorMessage(result.message || "Invalid email or password");
         Alert.alert(
           "Login Failed",
           result.message
@@ -55,11 +56,8 @@ export default function LoginScreen() {
       } else {
         router.replace("/(tab)/home");
       }
-
-      Alert.alert(
-        "Login Successful",
-        result.message
-      );
+    } catch (err: any) {
+      setErrorMessage(err.message || "An unexpected connection error occurred.");
     } finally {
       setLoading(false);
     }
@@ -78,6 +76,12 @@ export default function LoginScreen() {
           Sign in to continue your journey
         </Text>
 
+        {errorMessage ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : null}
+
         <FormField
           label="Email Address"
           placeholder="Enter your email"
@@ -85,7 +89,10 @@ export default function LoginScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => {
+            setEmail(text);
+            if (errorMessage) setErrorMessage(null);
+          }}
         />
 
         <FormField
@@ -198,5 +205,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 4,
+  },
+
+  errorContainer: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#DC2626",
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
+  errorText: {
+    color: "#DC2626",
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

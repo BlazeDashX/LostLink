@@ -14,13 +14,6 @@ export default function SearchBar({
   onChangeText,
   placeholder = "Search",
 }: SearchBarProps) {
-  const handleSearch = () => {
-    if (!value.trim()) {
-      alert("Search field cannot be empty");
-      return;
-    }
-  };
-
   return (
     <View style={styles.container}>
       <Ionicons
@@ -30,9 +23,10 @@ export default function SearchBar({
       />
 
       <TextInput
+        accessibilityLabel={placeholder}
+        accessibilityRole="search"
         autoCapitalize="none"
         onChangeText={onChangeText}
-        onSubmitEditing={handleSearch}
         placeholder={placeholder}
         placeholderTextColor={COLORS.textMuted}
         style={styles.input}

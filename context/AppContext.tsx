@@ -78,9 +78,9 @@ interface AppContextType {
   ) => ActionResponse;
 
   // Claim Actions
-  submitClaim: (data: SubmitClaimData) => ActionResponse;
-  approveClaim: (claimId: string) => ActionResponse;
-  rejectClaim: (claimId: string) => ActionResponse;
+  submitClaim: (data: SubmitClaimData) => Promise<ActionResponse>;
+  approveClaim: (claimId: string) => Promise<ActionResponse>;
+  rejectClaim: (claimId: string) => Promise<ActionResponse>;
   getClaimById: (claimId: string) => Claim | undefined;
   getClaimsByItem: (itemId: string) => Claim[];
 
@@ -258,9 +258,9 @@ export function AppProvider({
       (user) => user.id === currentUserId
     ) ?? null;
 
-  const submitClaim = (
+  const submitClaim = async (
     data: SubmitClaimData
-  ): ActionResponse => {
+  ): Promise<ActionResponse> => {
     if (!currentUserId) {
       return {
         ok: false,
@@ -268,185 +268,151 @@ export function AppProvider({
       };
     }
 
-    const item = items.find(
-      (i) => i.id === data.itemId
-    );
+    try {
+      const response = await api.post("/api/claims", {
+        itemId: data.itemId,
+        claimantId: currentUserId,
+        answers: data.answers,
+        handoverMethod: data.handoverMethod,
+      });
 
-    if (!item) {
-      return {
-        ok: false,
-        message: "Item not found.",
-      };
-    }
+      const newClaim: Claim = response.data.claim;
 
-    if (item.reporterId === currentUserId) {
-      return {
-        ok: false,
-        message:
-          "The reporter cannot claim their own item.",
-      };
-    }
+      if (newClaim) {
+        setClaims((prev) => [newClaim, ...prev.filter((c) => c.id !== newClaim.id)]);
+      }
 
-    const existingClaim = claims.find(
-      (c) =>
-        c.itemId === data.itemId &&
-        c.claimantId === currentUserId &&
-        ["Pending", "Approved"].includes(c.status)
-    );
-
-    if (existingClaim) {
-      return {
-        ok: false,
-        message:
-          "You already have an active claim for this item.",
-      };
-    }
-
-    const newClaim: Claim = {
-      id: `CLM${Date.now()}`,
-      itemId: data.itemId,
-      claimantId: currentUserId,
-      answers: data.answers,
-      handoverMethod: data.handoverMethod,
-      status: "Pending",
-      reviewedBy: null,
-      createdAt: new Date().toISOString(),
-    };
-
-    setClaims((prev) => [
-      ...prev,
-      newClaim,
-    ]);
-
-    if (item.status === "Active") {
       setItems((prev) =>
         prev.map((i) =>
-          i.id === item.id
-            ? {
-                ...i,
-                status: "Pending Claim",
-              }
+          i.id === data.itemId && i.status === "Active"
+            ? { ...i, status: "Pending Claim" }
             : i
         )
       );
-    }
 
-    return {
-      ok: true,
-      message: "Claim submitted successfully.",
-      claimId: newClaim.id,
-    };
-  };
-
-  const approveClaim = (
-    claimId: string
-  ): ActionResponse => {
-    const claim = claims.find(
-      (c) => c.id === claimId
-    );
-
-    if (!claim) {
+      return {
+        ok: true,
+        message: response.data.message || "Claim submitted successfully.",
+        claimId: newClaim?.id || `CL${Date.now()}`,
+      };
+    } catch (error: any) {
       return {
         ok: false,
-        message: "Claim not found.",
+        message:
+          error.response?.data?.message ||
+          "Failed to submit claim. Please check your connection and try again.",
       };
     }
-
-    setClaims((prev) =>
-      prev.map((c) => {
-        if (c.id === claimId) {
-          return {
-            ...c,
-            status: "Approved",
-            reviewedBy: currentUserId,
-          };
-        }
-
-        if (
-          c.itemId === claim.itemId &&
-          c.status === "Pending"
-        ) {
-          return {
-            ...c,
-            status: "Rejected",
-            reviewedBy: currentUserId,
-          };
-        }
-
-        return c;
-      })
-    );
-
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === claim.itemId
-          ? {
-              ...i,
-              status: "Reserved",
-            }
-          : i
-      )
-    );
-
-    return {
-      ok: true,
-      message:
-        "Claim approved. Item is now reserved.",
-    };
   };
 
-  const rejectClaim = (
+  const approveClaim = async (
     claimId: string
-  ): ActionResponse => {
-    const claim = claims.find(
-      (c) => c.id === claimId
-    );
+  ): Promise<ActionResponse> => {
+    try {
+      const response = await api.patch(`/api/claims/${claimId}`, {
+        status: "Approved",
+        reviewedBy: currentUserId,
+      });
 
-    if (!claim) {
-      return {
-        ok: false,
-        message: "Claim not found.",
-      };
-    }
+      const updatedClaim: Claim = response.data.claim;
 
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === claimId
-          ? {
+      setClaims((prev) =>
+        prev.map((c) => {
+          if (c.id === claimId) {
+            return updatedClaim || {
+              ...c,
+              status: "Approved",
+              reviewedBy: currentUserId,
+            };
+          }
+
+          if (
+            c.itemId === (updatedClaim?.itemId || c.itemId) &&
+            c.status === "Pending"
+          ) {
+            return {
               ...c,
               status: "Rejected",
               reviewedBy: currentUserId,
-            }
-          : c
-      )
-    );
+            };
+          }
 
-    const otherActiveClaims = claims.filter(
-      (c) =>
-        c.itemId === claim.itemId &&
-        c.id !== claimId &&
-        ["Pending", "Approved"].includes(
-          c.status
-        )
-    );
+          return c;
+        })
+      );
 
-    if (otherActiveClaims.length === 0) {
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === claim.itemId
-            ? {
-                ...i,
-                status: "Active",
+      const targetItemId = updatedClaim?.itemId;
+      if (targetItemId) {
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === targetItemId
+              ? { ...i, status: "Reserved" }
+              : i
+          )
+        );
+      }
+
+      return {
+        ok: true,
+        message: response.data.message || "Claim approved. Item is now reserved.",
+      };
+    } catch (error: any) {
+      return {
+        ok: false,
+        message:
+          error.response?.data?.message ||
+          "Failed to approve claim. Please try again.",
+      };
+    }
+  };
+
+  const rejectClaim = async (
+    claimId: string
+  ): Promise<ActionResponse> => {
+    try {
+      const response = await api.patch(`/api/claims/${claimId}`, {
+        status: "Rejected",
+        reviewedBy: currentUserId,
+      });
+
+      const updatedClaim: Claim = response.data.claim;
+      const newItemStatus = response.data.itemStatus;
+
+      setClaims((prev) =>
+        prev.map((c) =>
+          c.id === claimId
+            ? updatedClaim || {
+                ...c,
+                status: "Rejected",
+                reviewedBy: currentUserId,
               }
-            : i
+            : c
         )
       );
-    }
 
-    return {
-      ok: true,
-      message: "Claim rejected.",
-    };
+      const targetItemId = updatedClaim?.itemId;
+      if (targetItemId && newItemStatus) {
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === targetItemId
+              ? { ...i, status: newItemStatus }
+              : i
+          )
+        );
+      }
+
+      return {
+        ok: true,
+        message: response.data.message || "Claim rejected.",
+      };
+    } catch (error: any) {
+      return {
+        ok: false,
+        message:
+          error.response?.data?.message ||
+          "Failed to reject claim. Please try again.",
+      };
+    }
   };
 
   const getClaimById = (
