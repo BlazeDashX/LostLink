@@ -6,7 +6,8 @@ import {
   ActivityIndicator,
   Text,
 } from "react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
@@ -27,7 +28,8 @@ export default function ProfileScreen() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
 
-  useEffect(() => {
+  useFocusEffect(
+  useCallback(() => {
     const loadProfile = async () => {
       if (!currentUserId) {
         setProfile(null);
@@ -62,7 +64,8 @@ export default function ProfileScreen() {
     };
 
     loadProfile();
-  }, [currentUserId]);
+  }, [currentUserId])
+);
 
   const handleLogout = async () => {
     const confirmed = window.confirm(
@@ -166,12 +169,8 @@ export default function ProfileScreen() {
             icon="create-outline"
             title="Edit Profile"
             subtitle="Update your display information"
-            onPress={() =>
-              Alert.alert(
-                "Edit Profile",
-                "Profile editing will be connected next."
-              )
-            }
+            onPress={() => router.push("/profile/edit-profile" as any)}
+
           />
 
           <ProfileMenuRow
