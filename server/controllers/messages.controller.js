@@ -5,7 +5,7 @@ const claimsQueries = require("../queries/claims.queries");
 // GET /api/conversations - List conversations for a user
 async function getConversations(req, res) {
   try {
-    const userId = req.query.userId || req.headers["x-user-id"];
+    const userId = req.user ? req.user.id : (req.query.userId || req.headers["x-user-id"]);
 
     if (!userId) {
       return res.status(400).json({
@@ -91,10 +91,60 @@ async function findOrCreateConversation(req, res) {
   }
 }
 
+// GET /api/conversations/:id - Get conversation thread metadata
+async function getConversationDetails(req, res) {
+  try {
+    const { id } = req.params;
+    const conversation = await messagesQueries.getConversationById(pool, id);
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found." });
+    }
+
+    if (req.user) {
+      const isParticipant =
+        conversation.participant_one_id === req.user.id ||
+        conversation.participant_two_id === req.user.id ||
+        req.user.role === "Admin";
+      if (!isParticipant) {
+        return res.status(403).json({
+          message: "Forbidden: You are not a participant in this conversation.",
+        });
+      }
+    }
+
+    return res.status(200).json({ conversation });
+  } catch (err) {
+    console.error("Error fetching conversation details:", err);
+    return res.status(500).json({
+      message: "Internal server error while fetching conversation details.",
+      error: err.message,
+    });
+  }
+}
+
 // GET /api/conversations/:id/messages - Load messages for a conversation
 async function getMessages(req, res) {
   try {
     const { id } = req.params;
+    const conv = await messagesQueries.getConversationById(pool, id);
+
+    if (!conv) {
+      return res.status(404).json({ message: "Conversation not found." });
+    }
+
+    if (req.user) {
+      const isParticipant =
+        conv.participant_one_id === req.user.id ||
+        conv.participant_two_id === req.user.id ||
+        req.user.role === "Admin";
+      if (!isParticipant) {
+        return res.status(403).json({
+          message: "Forbidden: You are not a participant in this conversation.",
+        });
+      }
+    }
+
     const messages = await messagesQueries.getMessagesByConversation(pool, id);
 
     return res.status(200).json({ messages });
@@ -111,14 +161,15 @@ async function getMessages(req, res) {
 async function sendMessage(req, res) {
   const { id } = req.params;
   const { itemId, senderId, receiverId, text } = req.body;
+  const effectiveSenderId = req.user ? req.user.id : senderId;
 
-  if (!senderId || !receiverId || !text || !text.trim()) {
+  if (!effectiveSenderId || !receiverId || !text || !text.trim()) {
     return res.status(400).json({
       message: "senderId, receiverId, and non-empty text are required.",
     });
   }
 
-  if (senderId === receiverId) {
+  if (effectiveSenderId === receiverId) {
     return res.status(400).json({
       message: "Sender and receiver cannot be the same user.",
     });
@@ -134,7 +185,7 @@ async function sendMessage(req, res) {
       id: messageId,
       conversationId: id,
       itemId,
-      senderId,
+      senderId: effectiveSenderId,
       receiverId,
       text: text.trim(),
       sentAt: new Date().toISOString(),
@@ -144,7 +195,7 @@ async function sendMessage(req, res) {
     const inserted = await messagesQueries.insertMessage(client, msgData);
 
     // Get sender name for clear notification
-    const senderRes = await client.query("SELECT name FROM users WHERE id = $1", [senderId]);
+    const senderRes = await client.query("SELECT name FROM users WHERE id = $1", [effectiveSenderId]);
     const senderName = senderRes.rows[0]?.name || "Someone";
 
     // Insert in-app notification for receiver
@@ -180,15 +231,15 @@ async function sendMessage(req, res) {
 async function markAsRead(req, res) {
   try {
     const { id } = req.params;
-    const { userId } = req.body;
+    const effectiveUserId = req.user ? req.user.id : req.body?.userId;
 
-    if (!userId) {
+    if (!effectiveUserId) {
       return res.status(400).json({
         message: "userId of the reader is required.",
       });
     }
 
-    const updatedCount = await messagesQueries.markMessagesAsRead(pool, id, userId);
+    const updatedCount = await messagesQueries.markMessagesAsRead(pool, id, effectiveUserId);
 
     return res.status(200).json({
       message: "Messages marked as read.",
@@ -206,6 +257,7 @@ async function markAsRead(req, res) {
 module.exports = {
   getConversations,
   findOrCreateConversation,
+  getConversationDetails,
   getMessages,
   sendMessage,
   markAsRead,

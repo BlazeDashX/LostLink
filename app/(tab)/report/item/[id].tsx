@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -19,8 +20,10 @@ import StatusBadge from "@/components/status-badge";
 import categoriesData from "@/data/categories.json";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { deleteItem } from "@/services/items";
-import { Message } from "@/types";
+import { getClaims } from "@/services/claims";
+import { findOrCreateConversation } from "@/services/conversations";
+import { deleteItem, getItemById } from "@/services/items";
+import { Claim, Item, Message } from "@/types";
 
 type CategoryItem = {
   id: string;
@@ -32,8 +35,77 @@ export default function ItemDetailsScreen() {
   const { id } = useLocalSearchParams() as { id: string };
   const { claims, currentUserId, items, setItems, messages, setMessages, users } = useApp();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [fetchedItem, setFetchedItem] = useState<Item | null>(null);
+  const [fetchedClaims, setFetchedClaims] = useState<Claim[]>([]);
+  const [isLoadingClaims, setIsLoadingClaims] = useState(false);
+  const [isContacting, setIsContacting] = useState(false);
 
-  const item = items.find((candidate) => candidate.id === id);
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    getItemById(id)
+      .then((data) => {
+        if (isMounted && data) {
+          setFetchedItem(data);
+          setItems((prev) =>
+            prev.map((i) => (i.id === data.id ? { ...i, ...data } : i))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch fresh item from API:", err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [id, setItems]);
+
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    setIsLoadingClaims(true);
+    getClaims({ itemId: id }, currentUserId)
+      .then((data) => {
+        if (isMounted) setFetchedClaims(data);
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch claims for item:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingClaims(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [id, currentUserId]);
+
+  const itemClaims = useMemo(() => {
+    const list = [...fetchedClaims];
+    claims.forEach((c) => {
+      if (c.itemId === id && !list.some((existing) => existing.id === c.id)) {
+        list.push(c);
+      }
+    });
+    return list;
+  }, [fetchedClaims, claims, id]);
+
+  const rawItem = fetchedItem || items.find((candidate) => candidate.id === id);
+
+  const effectiveStatus = useMemo(() => {
+    if (itemClaims.some((c) => c.status === "Completed")) return "Solved";
+    if (itemClaims.some((c) => c.status === "Approved")) return "Reserved";
+    if (itemClaims.some((c) => c.status === "Pending")) return "Pending Claim";
+    return rawItem?.status || "Active";
+  }, [itemClaims, rawItem?.status]);
+
+  const item = useMemo(() => {
+    if (!rawItem) return undefined;
+    return {
+      ...rawItem,
+      status: effectiveStatus,
+    };
+  }, [rawItem, effectiveStatus]);
+
   const reporter = users.find((user) => user.id === item?.reporterId);
   const category = (categoriesData as CategoryItem[]).find(
     (c) => c.id === item?.categoryId
@@ -42,6 +114,7 @@ export default function ItemDetailsScreen() {
   const isReporter = item?.reporterId === currentUserId;
   const currentUser = users.find((user) => user.id === currentUserId);
   const isReporterOrAdmin = isReporter || currentUser?.role === "Admin";
+
   const currentUserClaim = useMemo(() => {
     if (!item) return undefined;
     return claims.find(
@@ -62,37 +135,54 @@ export default function ItemDetailsScreen() {
     );
   }
 
-  const handleContactReporter = () => {
-    if (!reporter || !currentUserId) return;
+  const handleContactReporter = async () => {
+    if (!reporter || !currentUserId || isContacting) return;
 
-    const existingMessage = messages.find(
-      (m) =>
-        m.itemId === item.id &&
-        ((m.senderId === currentUserId && m.receiverId === reporter.id) ||
-          (m.senderId === reporter.id && m.receiverId === currentUserId))
-    );
-
-    let conversationId = existingMessage?.conversationId;
-
-    if (!conversationId) {
-      conversationId = `CV${Date.now()}`;
-      const initialMessage: Message = {
-        id: `M${Date.now()}`,
-        conversationId,
-        itemId: item.id,
-        senderId: currentUserId,
-        receiverId: reporter.id,
-        text: `Hi ${reporter.name}, I am inquiring about your reported item "${item.title}".`,
-        sentAt: new Date().toISOString(),
-        read: false,
-      };
-      setMessages((prev) => [...prev, initialMessage]);
+    if (currentUserId === reporter.id) {
+      const selfMsg = "You cannot message yourself about your own report.";
+      if (Platform.OS === "web") {
+        window.alert(selfMsg);
+      } else {
+        Alert.alert("Notice", selfMsg);
+      }
+      return;
     }
 
-    router.push({
-      pathname: "/Inbox/[conversationId]",
-      params: { conversationId, itemId: item.id },
-    } as any);
+    // Prevent aria-hidden focus retain warning on web
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      (document.activeElement as HTMLElement)?.blur?.();
+    }
+
+    setIsContacting(true);
+    try {
+      const res = await findOrCreateConversation(
+        item.id,
+        currentUserId,
+        reporter.id,
+        currentUserId
+      );
+
+      router.push({
+        pathname: "/Inbox/[conversationId]",
+        params: {
+          conversationId: res.conversation.id,
+          itemId: item.id,
+        },
+      } as any);
+    } catch (err: any) {
+      console.error("Error initiating conversation with reporter:", err);
+      const errMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to start conversation. Please check your connection.";
+      if (Platform.OS === "web") {
+        window.alert(errMsg);
+      } else {
+        Alert.alert("Error", errMsg);
+      }
+    } finally {
+      setIsContacting(false);
+    }
   };
 
   const handleClaimItem = () => {
@@ -211,6 +301,76 @@ export default function ItemDetailsScreen() {
           </View>
         </View>
 
+        {/* Claims for Reporter/Admin Section */}
+        {isReporterOrAdmin ? (
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons color={COLORS.primary} name="shield-checkmark-outline" size={20} />
+                <Text style={styles.claimsSectionTitle}>Claims Received</Text>
+              </View>
+              <View style={styles.claimsCountBadge}>
+                <Text style={styles.claimsCountText}>
+                  {itemClaims.length} {itemClaims.length === 1 ? "claim" : "claims"}
+                </Text>
+              </View>
+            </View>
+
+            {isLoadingClaims ? (
+              <ActivityIndicator color={COLORS.primary} style={{ marginVertical: SPACING.lg }} />
+            ) : itemClaims.length > 0 ? (
+              <View style={{ gap: SPACING.sm, marginTop: SPACING.xs }}>
+                {itemClaims.map((c) => {
+                  const claimantUser = users.find((u) => u.id === c.claimantId);
+                  const claimantName =
+                    claimantUser?.name || (c as any).claimantName || `Claimant (${c.claimantId})`;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      accessibilityLabel={`Review claim ${c.id} from ${claimantName}`}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        router.push({
+                          pathname: "/report/claim/review",
+                          params: { claimId: c.id },
+                        } as any);
+                      }}
+                      style={styles.claimListItem}
+                    >
+                      <View style={styles.claimantAvatarCircle}>
+                        <Text style={styles.claimantAvatarText}>
+                          {claimantName.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.claimantItemName}>{claimantName}</Text>
+                        <Text style={styles.claimantItemSub}>
+                          Handover: {c.handoverMethod || "Standard"}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end", gap: 4 }}>
+                        <StatusBadge status={c.status} />
+                        <View style={styles.reviewLinkRow}>
+                          <Text style={styles.reviewLinkText}>Review Evidence</Text>
+                          <Ionicons color={COLORS.primary} name="chevron-forward" size={14} />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.noClaimsNotice}>
+                <Ionicons color={COLORS.textMuted} name="document-text-outline" size={28} />
+                <Text style={styles.noClaimsTitle}>No Claims Submitted Yet</Text>
+                <Text style={styles.noClaimsSub}>
+                  When someone submits an ownership claim for this item, their answers will appear here for you to review evidence, chat with them, and approve or reject.
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : null}
+
         <View style={styles.actionsContainer}>
           {currentUserClaim ? (
             <View style={styles.claimStatusBox}>
@@ -273,6 +433,8 @@ export default function ItemDetailsScreen() {
               {reporter ? (
                 <View style={styles.buttonSpacing}>
                   <PrimaryButton
+                    disabled={isContacting}
+                    loading={isContacting}
                     label="Contact Reporter"
                     onPress={handleContactReporter}
                     outlined
@@ -386,5 +548,93 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  sectionHeaderRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: SPACING.md,
+  },
+  claimsSectionTitle: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  claimsCountBadge: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  claimsCountText: {
+    color: COLORS.primaryDark,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  claimListItem: {
+    alignItems: "center",
+    backgroundColor: COLORS.background,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: SPACING.sm,
+    padding: SPACING.md,
+  },
+  claimantAvatarCircle: {
+    alignItems: "center",
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  claimantAvatarText: {
+    color: COLORS.primaryDark,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  claimantItemName: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  claimantItemSub: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  reviewLinkRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 2,
+    marginTop: 2,
+  },
+  reviewLinkText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  noClaimsNotice: {
+    alignItems: "center",
+    backgroundColor: COLORS.background,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    padding: SPACING.lg,
+  },
+  noClaimsTitle: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: SPACING.xs,
+  },
+  noClaimsSub: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 4,
+    textAlign: "center",
   },
 });
