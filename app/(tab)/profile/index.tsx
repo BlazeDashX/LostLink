@@ -157,12 +157,7 @@ export default function ProfileScreen() {
             icon="notifications-outline"
             title="Notifications"
             subtitle="View alerts and updates"
-            onPress={() =>
-              Alert.alert(
-                "Notifications",
-                "Notifications screen will be connected next."
-              )
-            }
+            onPress={() => router.push("/profile/notifications" as any)}
           />
 
           <ProfileMenuRow
