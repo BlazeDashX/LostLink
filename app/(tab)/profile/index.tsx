@@ -1,11 +1,10 @@
 import {
-  Alert,
-  Platform,
   ScrollView,
   StyleSheet,
   View,
   ActivityIndicator,
   Text,
+  Pressable,
 } from "react-native";
 import { useCallback, useState } from "react";
 import { useFocusEffect, router } from "expo-router";
@@ -27,6 +26,7 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<SafeUser | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState("");
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -67,37 +67,16 @@ export default function ProfileScreen() {
     }, [currentUserId])
   );
 
-  const handleLogout = async () => {
-    if (Platform.OS === "web") {
-      const confirmed = window.confirm(
-        "Are you sure you want to logout?"
-      );
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
 
-      if (!confirmed) return;
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false);
 
-      await logout();
-      router.replace("/(auth)/login");
-      return;
-    }
+    await logout();
 
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/(auth)/login");
-          },
-        },
-      ]
-    );
+    router.replace("/(auth)/login");
   };
 
   const handleRetry = () => {
@@ -173,7 +152,9 @@ export default function ProfileScreen() {
             icon="document-text-outline"
             title="My Activity"
             subtitle="Reports, claims and solved items"
-            onPress={() => router.push("/my-activity" as any)}
+            onPress={() =>
+              router.push("/my-activity" as any)
+            }
           />
 
           <ProfileMenuRow
@@ -181,7 +162,9 @@ export default function ProfileScreen() {
             title="Notifications"
             subtitle="View alerts and updates"
             onPress={() =>
-              router.push("/profile/notifications" as any)
+              router.push(
+                "/profile/notifications" as any
+              )
             }
           />
 
@@ -190,7 +173,9 @@ export default function ProfileScreen() {
             title="Edit Profile"
             subtitle="Update your display information"
             onPress={() =>
-              router.push("/profile/edit-profile" as any)
+              router.push(
+                "/profile/edit-profile" as any
+              )
             }
           />
 
@@ -199,7 +184,9 @@ export default function ProfileScreen() {
             title="Help & Rules"
             subtitle="Privacy and safe handover guidance"
             onPress={() =>
-              router.push("/profile/help-rules" as any)
+              router.push(
+                "/profile/help-rules" as any
+              )
             }
           />
         </View>
@@ -211,6 +198,48 @@ export default function ProfileScreen() {
           />
         </View>
       </ScrollView>
+
+      {showLogoutConfirm ? (
+        <View style={styles.overlay}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>
+              Logout
+            </Text>
+
+            <Text style={styles.confirmMessage}>
+              Are you sure you want to logout?
+            </Text>
+
+            <View style={styles.confirmButtons}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cancel logout"
+                accessibilityHint="Closes the logout confirmation"
+                onPress={() =>
+                  setShowLogoutConfirm(false)
+                }
+                style={styles.cancelButton}
+              >
+                <Text style={styles.cancelButtonText}>
+                  Cancel
+                </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Confirm logout"
+                accessibilityHint="Logs you out of LostLink"
+                onPress={confirmLogout}
+                style={styles.logoutButton}
+              >
+                <Text style={styles.logoutButtonText}>
+                  Logout
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -256,5 +285,76 @@ const styles = StyleSheet.create({
 
   buttonContainer: {
     marginTop: 28,
+  },
+
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+
+  confirmCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 24,
+  },
+
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 8,
+  },
+
+  confirmMessage: {
+    fontSize: 14,
+    color: "#6B7280",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+
+  confirmButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+  },
+
+  cancelButton: {
+    minWidth: 90,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+  },
+
+  cancelButtonText: {
+    color: "#374151",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  logoutButton: {
+    minWidth: 90,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: "#DC2626",
+    alignItems: "center",
+  },
+
+  logoutButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

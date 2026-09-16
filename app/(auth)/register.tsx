@@ -6,8 +6,6 @@ import {
   StyleSheet,
   Text,
   ScrollView,
-  Alert,
-  Platform,
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -61,6 +59,12 @@ export default function RegisterScreen() {
     password: false,
     confirmPassword: false,
   });
+
+  const [feedback, setFeedback] = useState<{
+    title: string;
+    message: string;
+    success: boolean;
+  } | null>(null);
 
   const validateField = (
     field: keyof FormErrors,
@@ -200,34 +204,9 @@ export default function RegisterScreen() {
     );
   };
 
-  const showAlert = (
-    title: string,
-    message: string,
-    onPress?: () => void
-  ) => {
-    if (Platform.OS === "web") {
-      window.alert(`${title}\n\n${message}`);
-
-      if (onPress) {
-        onPress();
-      }
-
-      return;
-    }
-
-    Alert.alert(
-      title,
-      message,
-      [
-        {
-          text: "OK",
-          onPress,
-        },
-      ]
-    );
-  };
-
   const handleRegister = async () => {
+    setFeedback(null);
+
     const isValid = validateAllFields();
 
     if (!isValid) {
@@ -244,22 +223,21 @@ export default function RegisterScreen() {
         password,
       });
 
-      showAlert(
-        "Registration Successful",
-        response.data.message,
-        () => {
-          router.replace("/(auth)/login");
-        }
-      );
+      setFeedback({
+        title: "Registration Successful",
+        message: response.data.message,
+        success: true,
+      });
     } catch (error: any) {
       const message =
         error.response?.data?.message ||
         "Registration failed. Please try again.";
 
-      showAlert(
-        "Registration Failed",
-        message
-      );
+      setFeedback({
+        title: "Registration Failed",
+        message,
+        success: false,
+      });
     } finally {
       setLoading(false);
     }
@@ -297,6 +275,45 @@ export default function RegisterScreen() {
         <Text style={styles.helperText}>
           Create your LostLink account.
         </Text>
+
+        {feedback ? (
+          <View
+            style={[
+              styles.feedbackContainer,
+              feedback.success
+                ? styles.successFeedback
+                : styles.errorFeedback,
+            ]}
+          >
+            <Text style={styles.feedbackTitle}>
+              {feedback.title}
+            </Text>
+
+            <Text style={styles.feedbackMessage}>
+              {feedback.message}
+            </Text>
+
+            {feedback.success ? (
+              <PrimaryButton
+                title="Continue to Login"
+                onPress={() =>
+                  router.replace("/(auth)/login")
+                }
+              />
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss registration error"
+                accessibilityHint="Closes the registration error message"
+                onPress={() => setFeedback(null)}
+              >
+                <Text style={styles.dismissText}>
+                  Dismiss
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
 
         <FormField
           label="Full Name"
@@ -365,6 +382,7 @@ export default function RegisterScreen() {
           title="Create Account"
           onPress={handleRegister}
           loading={loading}
+          disabled={!!feedback}
         />
 
         <Text style={styles.noteText}>
@@ -377,10 +395,10 @@ export default function RegisterScreen() {
           </Text>
 
           <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Login"
-              accessibilityHint="Opens the login screen"
-              onPress={() =>
+            accessibilityRole="button"
+            accessibilityLabel="Login"
+            accessibilityHint="Opens the login screen"
+            onPress={() =>
               router.replace("/(auth)/login")
             }
           >
@@ -405,13 +423,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 40,
     paddingBottom: 32,
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-    marginBottom: 32,
   },
 
   heading: {
@@ -464,5 +475,44 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: COLORS.textPrimary,
     marginLeft: 16,
+  },
+
+  feedbackContainer: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
+  },
+
+  successFeedback: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#16A34A",
+  },
+
+  errorFeedback: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#DC2626",
+  },
+
+  feedbackTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    marginBottom: 6,
+  },
+
+  feedbackMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+  },
+
+  dismissText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 8,
   },
 });
