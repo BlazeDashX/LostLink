@@ -1,5 +1,6 @@
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   View,
@@ -7,9 +8,8 @@ import {
   Text,
 } from "react-native";
 import { useCallback, useState } from "react";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
 
 import AppHeader from "@/components/app-header";
 import ProfileSummary from "@/components/profile-summary";
@@ -29,53 +29,75 @@ export default function ProfileScreen() {
   const [profileError, setProfileError] = useState("");
 
   useFocusEffect(
-  useCallback(() => {
-    const loadProfile = async () => {
-      if (!currentUserId) {
-        setProfile(null);
-        setProfileLoading(false);
-        return;
-      }
+    useCallback(() => {
+      const loadProfile = async () => {
+        if (!currentUserId) {
+          setProfile(null);
+          setProfileLoading(false);
+          return;
+        }
 
-      try {
-        setProfileLoading(true);
-        setProfileError("");
+        try {
+          setProfileLoading(true);
+          setProfileError("");
 
-        const response = await api.get(
-          `/api/users/${currentUserId}`,
-          {
-            headers: {
-              "x-user-id": currentUserId,
-            },
-          }
-        );
+          const response = await api.get(
+            `/api/users/${currentUserId}`,
+            {
+              headers: {
+                "x-user-id": currentUserId,
+              },
+            }
+          );
 
-        setProfile(response.data.data);
-      } catch (error: any) {
-        console.error("Failed to load profile:", error);
+          setProfile(response.data.data);
+        } catch (error: any) {
+          console.error("Failed to load profile:", error);
 
-        setProfileError(
-          error.response?.data?.message ||
-            "Failed to load profile. Please try again."
-        );
-      } finally {
-        setProfileLoading(false);
-      }
-    };
+          setProfileError(
+            error.response?.data?.message ||
+              "Failed to load profile. Please try again."
+          );
+        } finally {
+          setProfileLoading(false);
+        }
+      };
 
-    loadProfile();
-  }, [currentUserId])
-);
+      loadProfile();
+    }, [currentUserId])
+  );
 
   const handleLogout = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to logout?"
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        "Are you sure you want to logout?"
+      );
+
+      if (!confirmed) return;
+
+      await logout();
+      router.replace("/(auth)/login");
+      return;
+    }
+
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            router.replace("/(auth)/login");
+          },
+        },
+      ]
     );
-
-    if (!confirmed) return;
-
-    await logout();
-    router.replace("/(auth)/login");
   };
 
   const handleRetry = () => {
@@ -117,6 +139,7 @@ export default function ProfileScreen() {
         {profileLoading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" />
+
             <Text style={styles.statusText}>
               Loading profile...
             </Text>
@@ -157,22 +180,27 @@ export default function ProfileScreen() {
             icon="notifications-outline"
             title="Notifications"
             subtitle="View alerts and updates"
-            onPress={() => router.push("/profile/notifications" as any)}
+            onPress={() =>
+              router.push("/profile/notifications" as any)
+            }
           />
 
           <ProfileMenuRow
             icon="create-outline"
             title="Edit Profile"
             subtitle="Update your display information"
-            onPress={() => router.push("/profile/edit-profile" as any)}
-
+            onPress={() =>
+              router.push("/profile/edit-profile" as any)
+            }
           />
 
           <ProfileMenuRow
             icon="help-circle-outline"
             title="Help & Rules"
             subtitle="Privacy and safe handover guidance"
-            onPress={() => router.push("/profile/help-rules" as any)}
+            onPress={() =>
+              router.push("/profile/help-rules" as any)
+            }
           />
         </View>
 
