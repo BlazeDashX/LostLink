@@ -50,6 +50,7 @@ function AuthGuard() {
     isAuthenticated,
     currentUser,
     segments,
+    router,
   ]);
 
   return null;
