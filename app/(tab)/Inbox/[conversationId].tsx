@@ -33,9 +33,18 @@ import { getItemById } from "@/services/items";
 import { Item, Message, SafeUser } from "@/types";
 
 export default function ChatScreen() {
-  const { conversationId, itemId: paramItemId } = useLocalSearchParams() as {
+  const {
+    conversationId,
+    itemId: paramItemId,
+    claimId: paramClaimId,
+    from,
+    adminFrom,
+  } = useLocalSearchParams() as {
     conversationId: string;
     itemId?: string;
+    claimId?: string;
+    from?: string;
+    adminFrom?: string;
   };
   const [draft, setDraft] = useState("");
   const [conversationMessages, setConversationMessages] = useState<Message[]>([]);
@@ -268,6 +277,43 @@ export default function ChatScreen() {
     );
   }, [claims, currentUserId, item]);
 
+  const relevantClaim = useMemo(() => {
+    if (paramClaimId) {
+      const match = claims.find((c) => c.id === paramClaimId);
+      if (match) return match;
+    }
+    if (currentUserClaim) return currentUserClaim;
+    if (pendingClaim) return pendingClaim;
+    if (!item) return undefined;
+    return claims.find(
+      (c) =>
+        c.itemId === item.id &&
+        (c.claimantId === otherUser?.id ||
+          c.claimantId === currentUserId ||
+          item.reporterId === currentUserId)
+    );
+  }, [claims, currentUserClaim, item, otherUser?.id, paramClaimId, pendingClaim, currentUserId]);
+
+  const handleBack = () => {
+    const claimTarget = paramClaimId || relevantClaim?.id;
+    if (from === "claim_review" && claimTarget) {
+      router.replace({
+        pathname: "/report/claim/review",
+        params: {
+          claimId: claimTarget,
+          from: adminFrom || undefined,
+        },
+      } as any);
+      return;
+    }
+
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/Inbox" as any);
+    }
+  };
+
   const handleSend = async () => {
     if (!draft.trim() || !otherUser || !item || !currentUserId || isSending)
       return;
@@ -407,7 +453,7 @@ export default function ChatScreen() {
   if (error && !isLoading && conversationMessages.length === 0) {
     return (
       <SafeAreaView style={styles.screen}>
-        <AppHeader showBack title="Conversation" />
+        <AppHeader onPressBack={handleBack} showBack title="Conversation" />
         <View style={styles.centerLoading}>
           <EmptyState
             icon="alert-circle-outline"
@@ -430,7 +476,7 @@ export default function ChatScreen() {
   if (!conversationId || (!item && !isLoading) || (!otherUser && !isLoading)) {
     return (
       <SafeAreaView style={styles.screen}>
-        <AppHeader showBack title="Conversation" />
+        <AppHeader onPressBack={handleBack} showBack title="Conversation" />
         <EmptyState
           icon="chatbubble-ellipses-outline"
           message="This conversation could not be loaded."
@@ -447,6 +493,7 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <AppHeader
+        onPressBack={handleBack}
         showBack
         subtitle={item?.title || "Conversation"}
         title={otherUser?.name || "Chat"}
@@ -466,17 +513,32 @@ export default function ChatScreen() {
           </View>
         ) : null}
 
-        {isReporter && pendingClaim ? (
+        {relevantClaim ? (
           <ClaimShortcutCard
-            actionLabel="Review claim"
-            message="A claimant has submitted private ownership evidence for this item."
+            actionLabel={
+              isReporter || currentUserId === item?.reporterId
+                ? "Review Claim"
+                : "View Claim Status"
+            }
+            message={
+              relevantClaim.status === "Pending"
+                ? "Private ownership evidence has been submitted for this item."
+                : `Claim #${relevantClaim.id} is currently ${relevantClaim.status.toLowerCase()}.`
+            }
             onPress={() =>
               router.push({
                 pathname: "/report/claim/review",
-                params: { claimId: pendingClaim.id },
+                params: {
+                  claimId: relevantClaim.id,
+                  from: adminFrom || undefined,
+                },
               } as any)
             }
-            title="Pending ownership claim"
+            title={
+              relevantClaim.status === "Pending"
+                ? "Pending ownership claim"
+                : `Claim ${relevantClaim.status}`
+            }
           />
         ) : canSubmitClaim ? (
           <ClaimShortcutCard
@@ -489,18 +551,6 @@ export default function ChatScreen() {
               } as any)
             }
             title="Claim this item safely"
-          />
-        ) : currentUserClaim ? (
-          <ClaimShortcutCard
-            actionLabel="View claim status"
-            message={`Your claim is currently ${currentUserClaim.status.toLowerCase()}.`}
-            onPress={() =>
-              router.push({
-                pathname: "/report/claim/review",
-                params: { claimId: currentUserClaim.id },
-              } as any)
-            }
-            title="Claim already submitted"
           />
         ) : null}
 

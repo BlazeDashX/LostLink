@@ -269,6 +269,9 @@ export default function ClaimReviewScreen() {
         params: {
           conversationId: res.conversation.id,
           itemId: claim.itemId,
+          claimId: claim.id,
+          from: "claim_review",
+          adminFrom: from === "admin" || currentUser?.role === "Admin" ? "admin" : undefined,
         },
       } as any);
     } catch (err: any) {
@@ -478,7 +481,7 @@ export default function ClaimReviewScreen() {
             <ClaimantCard
               claimant={claimant}
               isMessaging={isStartingChat}
-              onMessage={isReporter ? handleOpenChat : undefined}
+              onMessage={isReporter || currentUser?.role === "Admin" ? handleOpenChat : undefined}
             />
           </View>
         ) : null}
