@@ -15,6 +15,7 @@ import {
 } from "react-native";
 
 import AppHeader from "@/components/app-header";
+import CategoryDropdown from "@/components/category-dropdown";
 import ChoiceChip from "@/components/choice-chip";
 import FormField from "@/components/form-field";
 import PrimaryButton from "@/components/primary-button";
@@ -106,7 +107,7 @@ export default function ReportScreen() {
             const exists = activeList.some((cat) => cat.id === prevId);
             if (exists) return prevId;
           }
-          return isEditMode ? prevId : activeList[0].id;
+          return prevId;
         });
       }
     } catch (err: any) {
@@ -630,56 +631,16 @@ export default function ReportScreen() {
             value={title}
           />
 
-          <Text style={styles.label}>Category</Text>
-          {loadingCategories ? (
-            <View style={styles.categoryLoadingContainer}>
-              <ActivityIndicator color={COLORS.primary} size="small" />
-              <Text style={styles.categoryStatusText}>Loading categories...</Text>
-            </View>
-          ) : categoriesError ? (
-            <View style={styles.categoryErrorContainer}>
-              <Text style={styles.categoryErrorText}>{categoriesError}</Text>
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={fetchCategories}
-                style={styles.retryButton}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : categories.length === 0 ? (
-            <View style={styles.categoryLoadingContainer}>
-              <Text style={styles.categoryStatusText}>No categories available.</Text>
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={fetchCategories}
-                style={styles.retryButton}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoryScroll}
-            >
-              <View style={styles.chipRow}>
-                {categories.map((cat) => (
-                  <ChoiceChip
-                    key={cat.id}
-                    label={cat.name}
-                    onPress={() => handleCategorySelect(cat.id)}
-                    selected={categoryId === cat.id}
-                  />
-                ))}
-              </View>
-            </ScrollView>
-          )}
-          {/* Inline category validation error — visible after submit attempt */}
-          {categoryError ? (
-            <Text style={styles.inlineError}>{categoryError}</Text>
-          ) : null}
+          <CategoryDropdown
+            categories={categories}
+            error={categoryError || categoriesError}
+            label="Category"
+            loading={loadingCategories}
+            onRetry={fetchCategories}
+            onSelect={handleCategorySelect}
+            placeholder="Select a category..."
+            selectedId={categoryId}
+          />
 
           {/* Item Photo Section */}
           <Text style={styles.label}>Item Photo</Text>
@@ -828,55 +789,6 @@ const styles = StyleSheet.create({
   sectionTitle: { color: COLORS.text, fontSize: 18, fontWeight: "800", marginBottom: SPACING.sm },
   label: { color: COLORS.text, fontSize: 14, fontWeight: "600", marginBottom: SPACING.xs, marginTop: SPACING.sm },
   chipContainer: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs, marginTop: SPACING.xs },
-  chipRow: { flexDirection: "row", gap: SPACING.xs, paddingVertical: SPACING.xs },
-  categoryScroll: { marginBottom: SPACING.md },
-  categoryLoadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    paddingVertical: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  categoryStatusText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-  },
-  categoryErrorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: COLORS.dangerLight,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: 8,
-    marginBottom: SPACING.md,
-  },
-  categoryErrorText: {
-    color: COLORS.danger,
-    fontSize: 13,
-    flex: 1,
-    marginRight: SPACING.sm,
-  },
-  /** Inline validation error rendered below the category chips */
-  inlineError: {
-    color: COLORS.danger,
-    fontSize: 11,
-    marginTop: -SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  retryButton: {
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  retryButtonText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
   // Image Picker Styles
   imagePickerButton: {
     borderWidth: 1.5,

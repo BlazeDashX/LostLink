@@ -23,5 +23,5 @@
   { "id": "C022", "name": "Footwear", "icon": "icon_shoes.png", "active": true },
   { "id": "C023", "name": "Art Supplies", "icon": "icon_art.png", "active": true },
   { "id": "C024", "name": "Groceries", "icon": "icon_groceries.png", "active": true },
-  { "id": "C025", "name": "Miscellaneous", "icon": "icon_misc.png", "active": true }
+  { "id": "C025", "name": "Other / Miscellaneous", "icon": "icon_misc.png", "active": true }
 ]

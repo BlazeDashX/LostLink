@@ -61,6 +61,49 @@ async function requireAuth(req, res, next) {
   }
 }
 
+/**
+ * Optional authentication middleware:
+ * Populates req.user if a valid token or header is present,
+ * but does not reject the request if absent.
+ */
+async function optionalAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    const headerUserId = req.headers["x-user-id"];
+    const bodyUserId =
+      req.body?.reporterId ||
+      req.body?.claimantId ||
+      req.body?.senderId ||
+      req.body?.userId ||
+      req.query?.userId;
+
+    let userId = null;
+    if (headerUserId) {
+      userId = headerUserId;
+    } else if (authHeader && authHeader.startsWith("Bearer ")) {
+      userId = authHeader.split(" ")[1];
+    } else if (bodyUserId) {
+      userId = bodyUserId;
+    }
+
+    if (userId) {
+      const result = await query(
+        "SELECT id, name, email, role, status FROM users WHERE id = $1",
+        [userId]
+      );
+
+      if (result.rowCount > 0 && result.rows[0].status !== "Suspended") {
+        req.user = result.rows[0];
+      }
+    }
+    next();
+  } catch (error) {
+    console.error("Optional auth error:", error);
+    next();
+  }
+}
+
 module.exports = {
   requireAuth,
+  optionalAuth,
 };
