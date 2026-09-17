@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, RefreshControl, SafeAreaView, StyleSheet, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
 import AppHeader from "@/components/app-header";
@@ -93,7 +94,7 @@ export default function FeedScreen() {
   }, [synchronizedItems, query, selectedFilter]);
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={["top"]} style={styles.screen}>
       <AppHeader
         title="Item Feed"
         subtitle="Explore lost & found reports"

@@ -1,6 +1,7 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppProvider, useApp } from "@/context/AppContext";
 
@@ -49,6 +50,7 @@ function AuthGuard() {
     isAuthenticated,
     currentUser,
     segments,
+    router,
   ]);
 
   return null;
@@ -56,16 +58,18 @@ function AuthGuard() {
 
 export default function RootLayout() {
   return (
-    <AppProvider>
-      <AuthGuard />
+    <SafeAreaProvider style={{ flex: 1 }}>
+      <AppProvider>
+        <AuthGuard />
 
-      <StatusBar style="dark" />
+        <StatusBar style="dark" />
 
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
-    </AppProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }

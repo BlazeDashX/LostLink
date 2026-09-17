@@ -4,12 +4,12 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppHeader from "@/components/app-header";
 import ConversationRow from "@/components/conversation-row";
@@ -87,7 +87,7 @@ export default function InboxScreen() {
   }, [query, threads]);
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={["top"]} style={styles.screen}>
       <AppHeader title="Inbox" />
       <SearchBar
         onChangeText={setQuery}

@@ -6,13 +6,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppHeader from "@/components/app-header";
 import CategoryDropdown from "@/components/category-dropdown";
@@ -558,8 +558,8 @@ export default function ReportScreen() {
 
   if (isEditMode && isLoadingItem) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <AppHeader showBack onPressBack={handleBack} title="Edit Report" />
+      <SafeAreaView edges={["top"]} style={styles.screen}>
+        <AppHeader onPressBack={handleBack} showBack title="Edit Report" />
         <View style={styles.stateContainer}>
           <ActivityIndicator color={COLORS.primary} size="large" />
           <Text style={styles.stateLoadingText}>Loading report details...</Text>
@@ -570,8 +570,8 @@ export default function ReportScreen() {
 
   if (isEditMode && itemLoadError) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <AppHeader showBack onPressBack={handleBack} title="Edit Report" />
+      <SafeAreaView edges={["top"]} style={styles.screen}>
+        <AppHeader onPressBack={handleBack} showBack title="Edit Report" />
         <View style={styles.stateContainer}>
           <Ionicons color={COLORS.danger} name="alert-circle-outline" size={48} />
           <Text style={styles.stateErrorTitle}>Unable to Edit Report</Text>
@@ -589,7 +589,7 @@ export default function ReportScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={["top"]} style={styles.screen}>
       <AppHeader
         showBack={true}
         onPressBack={handleBack}

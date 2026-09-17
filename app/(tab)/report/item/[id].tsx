@@ -1,17 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppHeader from "@/components/app-header";
 import EmptyState from "@/components/empty-state";
@@ -23,6 +24,7 @@ import { useApp } from "@/context/AppContext";
 import { getClaims } from "@/services/claims";
 import { findOrCreateConversation } from "@/services/conversations";
 import { deleteItem, getItemById } from "@/services/items";
+import { resolveItemImageUrl } from "@/services/imageUtils";
 import { Claim, Item, Message } from "@/types";
 import { appAlert, appConfirm } from "@/utils/alert";
 
@@ -40,6 +42,7 @@ export default function ItemDetailsScreen() {
   const [fetchedClaims, setFetchedClaims] = useState<Claim[]>([]);
   const [isLoadingClaims, setIsLoadingClaims] = useState(false);
   const [isContacting, setIsContacting] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -107,6 +110,11 @@ export default function ItemDetailsScreen() {
     };
   }, [rawItem, effectiveStatus]);
 
+  const itemImageUrl = useMemo(
+    () => resolveItemImageUrl(item?.image),
+    [item?.image]
+  );
+
   const reporter = users.find((user) => user.id === item?.reporterId);
   const category = (categoriesData as CategoryItem[]).find(
     (c) => c.id === item?.categoryId
@@ -137,8 +145,8 @@ export default function ItemDetailsScreen() {
 
   if (!id || !item) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <AppHeader showBack onPressBack={handleBack} title="Item Details" />
+      <SafeAreaView edges={["top"]} style={styles.screen}>
+        <AppHeader showBack title="Item Details" />
         <EmptyState
           icon="alert-circle-outline"
           message="The requested item could not be found or has been removed."
@@ -253,19 +261,34 @@ export default function ItemDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <AppHeader
-        showBack
-        onPressBack={handleBack}
-        subtitle={`Item Ref: ${item.id}`}
-        title="Item Details"
-      />
+    <SafeAreaView edges={["top"]} style={styles.screen}>
+      <AppHeader showBack subtitle={`Item Ref: ${item.id}`} title="Item Details" />
 
       <ScrollView contentContainerStyle={styles.content}>
+        {itemImageUrl && !imageError ? (
+          <View style={styles.heroImageCard}>
+            <Image
+              source={{ uri: itemImageUrl }}
+              style={styles.heroImage}
+              contentFit="cover"
+              transition={300}
+              onError={() => setImageError(true)}
+            />
+          </View>
+        ) : null}
+
         <View style={styles.mainCard}>
           <View style={styles.headerRow}>
             <View style={styles.iconContainer}>
-              <Ionicons color={COLORS.primary} name="cube-outline" size={36} />
+              {itemImageUrl && !imageError ? (
+                <Image
+                  source={{ uri: itemImageUrl }}
+                  style={styles.thumbImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <Ionicons color={COLORS.primary} name="cube-outline" size={36} />
+              )}
             </View>
             <View style={styles.headerInfo}>
               <Text style={styles.typeBadge}>{item.type.toUpperCase()} ITEM</Text>
@@ -468,6 +491,23 @@ export default function ItemDetailsScreen() {
 const styles = StyleSheet.create({
   screen: { backgroundColor: COLORS.background, flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: 40 },
+  heroImageCard: {
+    backgroundColor: COLORS.surface,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 240,
+    marginBottom: SPACING.md,
+    overflow: "hidden",
+  },
+  heroImage: {
+    height: "100%",
+    width: "100%",
+  },
+  thumbImage: {
+    height: "100%",
+    width: "100%",
+  },
   mainCard: {
     backgroundColor: COLORS.surface,
     borderColor: COLORS.border,
@@ -483,6 +523,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     height: 64,
     justifyContent: "center",
+    overflow: "hidden",
     width: 64,
   },
   headerInfo: { flex: 1 },
