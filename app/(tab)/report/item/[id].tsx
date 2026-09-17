@@ -6,13 +6,13 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppHeader from "@/components/app-header";
 import EmptyState from "@/components/empty-state";
@@ -132,7 +132,7 @@ export default function ItemDetailsScreen() {
 
   if (!id || !item) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView edges={["top"]} style={styles.screen}>
         <AppHeader showBack title="Item Details" />
         <EmptyState
           icon="alert-circle-outline"
@@ -253,7 +253,7 @@ export default function ItemDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={["top"]} style={styles.screen}>
       <AppHeader showBack subtitle={`Item Ref: ${item.id}`} title="Item Details" />
 
       <ScrollView contentContainerStyle={styles.content}>

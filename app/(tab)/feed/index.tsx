@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, RefreshControl, SafeAreaView, StyleSheet, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppHeader from "@/components/app-header";
 import ChoiceChip from "@/components/choice-chip";
@@ -89,7 +90,7 @@ export default function FeedScreen() {
   }, [synchronizedItems, query, selectedFilter]);
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={["top"]} style={styles.screen}>
       <AppHeader subtitle="Explore lost & found reports" title="Item Feed" />
       <SearchBar onChangeText={setQuery} placeholder="Search lost or found items..." value={query} />
 
