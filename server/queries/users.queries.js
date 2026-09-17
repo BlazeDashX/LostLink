@@ -108,9 +108,33 @@ async function updateUserProfile(id, profile) {
   return result.rows[0] || null;
 }
 
+/**
+ * Delete a user by ID in PostgreSQL, cleaning dependent relations.
+ * @param {string} id - User ID
+ * @returns {Promise<Object|null>} Deleted safe user or null if not found
+ */
+async function deleteUser(id) {
+  // 1. Clean up dependent user records to preserve relational integrity
+  await query("DELETE FROM notifications WHERE user_id = $1", [id]);
+  await query("DELETE FROM messages WHERE sender_id = $1", [id]);
+  await query("DELETE FROM claims WHERE claimant_id = $1 OR reviewed_by = $1", [id]);
+  await query("DELETE FROM items WHERE reporter_id = $1", [id]);
+
+  // 2. Delete user
+  const sql = `
+    DELETE FROM users
+    WHERE id = $1
+    RETURNING id, name, email, phone, role, status, avatar
+  `;
+  const result = await query(sql, [id]);
+  return result.rows[0] || null;
+}
+
 module.exports = {
   getAllUsers,
   getUserById,
   updateUserProfile,
   updateUserStatus,
+  deleteUser,
 };
+

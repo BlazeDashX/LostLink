@@ -1,8 +1,24 @@
 import axios from "axios";
 
-export const BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ||
-  "https://lostlink-api-osca.onrender.com";
+import { Platform } from "react-native";
+
+const getBaseUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_API_BASE_URL;
+  }
+  if (
+    Platform.OS === "web" &&
+    typeof window !== "undefined" &&
+    window.location &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1")
+  ) {
+    return "http://localhost:3000";
+  }
+  return "https://lostlink-api-osca.onrender.com";
+};
+
+export const BASE_URL = getBaseUrl();
 
 export const api = axios.create({
   baseURL: BASE_URL,
