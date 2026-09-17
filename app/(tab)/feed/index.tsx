@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 
 import AppHeader from "@/components/app-header";
 import ChoiceChip from "@/components/choice-chip";
@@ -18,7 +19,10 @@ export default function FeedScreen() {
   const [query, setQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("All");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { items, claims, currentUserId, setItems, setClaims } = useApp();
+  const { items, claims, currentUserId, notifications, setItems, setClaims } = useApp();
+
+  const userNotifications = (notifications || []).filter((n) => n.userId === currentUserId);
+  const unreadCount = userNotifications.filter((n) => !n.read).length;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -91,7 +95,12 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
-      <AppHeader subtitle="Explore lost & found reports" title="Item Feed" />
+      <AppHeader
+        title="Item Feed"
+        subtitle="Explore lost & found reports"
+        onPressNotification={() => router.push("/profile/notifications" as any)}
+        unreadCount={unreadCount}
+      />
       <SearchBar onChangeText={setQuery} placeholder="Search lost or found items..." value={query} />
 
       <View style={styles.filterRow}>

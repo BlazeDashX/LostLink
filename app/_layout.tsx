@@ -41,7 +41,7 @@ function AuthGuard() {
         if (currentUser.role === "Admin") {
           router.replace("/(admin)");
         } else {
-          router.replace("/(tab)/home");
+          router.replace("/(tab)/feed");
         }
       }
     }

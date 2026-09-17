@@ -18,7 +18,7 @@ export default function AdminLayout() {
   }
 
   if (currentUser?.role !== "Admin") {
-    return <Redirect href="/(tab)/home" />;
+    return <Redirect href="/(tab)/feed" />;
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;

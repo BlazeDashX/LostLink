@@ -26,6 +26,7 @@ import { findOrCreateConversation } from "@/services/conversations";
 import { deleteItem, getItemById } from "@/services/items";
 import { resolveItemImageUrl } from "@/services/imageUtils";
 import { Claim, Item, Message } from "@/types";
+import { appAlert, appConfirm } from "@/utils/alert";
 
 type CategoryItem = {
   id: string;
@@ -216,53 +217,46 @@ export default function ItemDetailsScreen() {
     if (!currentUserClaim) return;
     router.push({
       pathname: "/report/claim/review",
-      params: { claimId: currentUserClaim.id },
+      params: {
+        claimId: currentUserClaim.id,
+        from: from || (currentUser?.role === "Admin" ? "admin" : undefined),
+      },
     } as any);
   };
 
   const handleDeleteReport = () => {
     if (isDeleting) return;
 
-    Alert.alert(
+    appConfirm(
       "Delete Report?",
       `Are you sure you want to delete "${item.title}"? This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            if (isDeleting) return;
-            setIsDeleting(true);
-            try {
-              await deleteItem(item.id, currentUserId);
-              setItems((prev) => prev.filter((i) => i.id !== item.id));
+      async () => {
+        if (isDeleting) return;
+        setIsDeleting(true);
+        try {
+          await deleteItem(item.id, currentUserId);
+          setItems((prev) => prev.filter((i) => i.id !== item.id));
 
-              Alert.alert("Deleted", "Your report has been deleted successfully.", [
-                {
-                  text: "OK",
-                  onPress: () => {
-                    if (from === "admin" || currentUser?.role === "Admin") {
-                      router.replace("/(admin)/admin-management" as any);
-                    } else if (router.canGoBack()) {
-                      router.back();
-                    } else {
-                      router.push("/feed" as any);
-                    }
-                  },
-                },
-              ]);
-            } catch (err: any) {
-              const msg =
-                err.response?.data?.message ||
-                "Failed to delete item report. Please try again.";
-              Alert.alert("Deletion Failed", msg);
-            } finally {
-              setIsDeleting(false);
+          appAlert("Deleted", "Your report has been deleted successfully.", () => {
+            if (from === "admin" || currentUser?.role === "Admin") {
+              router.replace("/(admin)/admin-management" as any);
+            } else if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push("/feed" as any);
             }
-          },
-        },
-      ]
+          });
+        } catch (err: any) {
+          const msg =
+            err.response?.data?.message ||
+            "Failed to delete item report. Please try again.";
+          appAlert("Deletion Failed", msg);
+        } finally {
+          setIsDeleting(false);
+        }
+      },
+      undefined,
+      "Delete"
     );
   };
 
@@ -374,7 +368,10 @@ export default function ItemDetailsScreen() {
                       onPress={() => {
                         router.push({
                           pathname: "/report/claim/review",
-                          params: { claimId: c.id },
+                          params: {
+                            claimId: c.id,
+                            from: from || (currentUser?.role === "Admin" ? "admin" : undefined),
+                          },
                         } as any);
                       }}
                       style={styles.claimListItem}

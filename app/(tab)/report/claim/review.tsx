@@ -30,13 +30,15 @@ import { Claim, Item, SafeUser } from "@/types";
 
 type ClaimReviewParams = {
   claimId?: string;
+  from?: string;
 };
 
 export default function ClaimReviewScreen() {
-  const { claimId } = useLocalSearchParams() as ClaimReviewParams;
+  const { claimId, from } = useLocalSearchParams() as ClaimReviewParams;
   const {
     claims,
     currentUserId,
+    currentUser: contextUser,
     items,
     users,
     setClaims,
@@ -56,7 +58,19 @@ export default function ClaimReviewScreen() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
 
-  const currentUser = users.find((user) => user.id === currentUserId);
+  const currentUser = contextUser || users.find((user) => user.id === currentUserId);
+
+  const handleBack = () => {
+    if (from === "admin" || currentUser?.role === "Admin") {
+      router.replace("/(admin)/admin-management" as any);
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tab)/feed" as any);
+    }
+  };
 
   const fetchClaimData = useCallback(
     async (isRefresh = false) => {
@@ -146,7 +160,7 @@ export default function ClaimReviewScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.screen}>
-        <AppHeader showBack title="Claim Review" />
+        <AppHeader onPressBack={handleBack} showBack title="Claim Review" />
         <View style={styles.centerContainer}>
           <ActivityIndicator color={COLORS.primary} size="large" />
           <Text style={styles.loadingText}>Loading claim details...</Text>
@@ -159,7 +173,7 @@ export default function ClaimReviewScreen() {
   if (error || !claimId || !claim) {
     return (
       <SafeAreaView style={styles.screen}>
-        <AppHeader showBack title="Claim Review" />
+        <AppHeader onPressBack={handleBack} showBack title="Claim Review" />
         <View style={styles.centerContainer}>
           <EmptyState
             icon="alert-circle-outline"
@@ -273,7 +287,7 @@ export default function ClaimReviewScreen() {
   if (!canView) {
     return (
       <SafeAreaView style={styles.screen}>
-        <AppHeader showBack title="Claim Review" />
+        <AppHeader onPressBack={handleBack} showBack title="Claim Review" />
         <EmptyState
           icon="lock-closed-outline"
           message="Only the item reporter, claimant, or an administrator can view this claim."
@@ -357,7 +371,7 @@ export default function ClaimReviewScreen() {
             )
           );
           showAlert("Claim Rejected", res.message || "Claim was rejected.", () =>
-            router.back()
+            handleBack()
           );
         } catch (err: any) {
           showAlert(
@@ -420,7 +434,12 @@ export default function ClaimReviewScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <AppHeader showBack subtitle={`Claim ${claim.id}`} title="Claim Review" />
+      <AppHeader
+        onPressBack={handleBack}
+        showBack
+        subtitle={`Claim ${claim.id}`}
+        title="Claim Review"
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={

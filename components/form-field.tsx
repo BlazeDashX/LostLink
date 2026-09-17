@@ -12,6 +12,7 @@ interface FormFieldProps {
   multiline?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   keyboardType?: KeyboardTypeOptions;
+  accessibilityLabel?: string;
 }
 
 export default function FormField({

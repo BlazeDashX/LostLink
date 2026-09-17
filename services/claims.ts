@@ -75,6 +75,11 @@ export async function getClaims(
 }
 
 /**
+ * Retrieve all claims (for Admin management).
+ */
+export const getAllClaims = (userId?: string | null) => getClaims(undefined, userId);
+
+/**
  * Fetch a single claim by its unique ID.
  */
 export async function getClaimById(

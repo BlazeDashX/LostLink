@@ -9,6 +9,7 @@ interface PrimaryButtonProps {
   loading?: boolean;
   destructive?: boolean;
   outlined?: boolean;
+  accessibilityLabel?: string;
 }
 
 export default function PrimaryButton({

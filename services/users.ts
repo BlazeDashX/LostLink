@@ -77,3 +77,28 @@ export async function updateUserProfile(
 
   return response.data;
 }
+
+export interface DeleteUserResponse {
+  message: string;
+  user: User;
+}
+
+/**
+ * Permanently delete a user via DELETE /api/users/:id.
+ * @param adminId Authenticated admin user ID (sent in x-user-id header)
+ * @param targetUserId ID of the user to delete
+ */
+export async function deleteUser(
+  adminId: string | null,
+  targetUserId: string
+): Promise<DeleteUserResponse> {
+  const headers: Record<string, string> = {};
+  if (adminId) {
+    headers["x-user-id"] = adminId;
+  }
+  const response = await api.delete<DeleteUserResponse>(
+    `/api/users/${targetUserId}`,
+    { headers }
+  );
+  return response.data;
+}

@@ -17,7 +17,7 @@ import { COLORS } from "@/constants/colors";
 import FormField from "@/components/FormField";
 import PrimaryButton from "@/components/PrimaryButton";
 
-import { api } from "@/services/api";
+import { api, BASE_URL } from "@/services/api";
 import { useApp } from "@/context/AppContext";
 
 interface FormErrors {

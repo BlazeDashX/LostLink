@@ -31,7 +31,7 @@ export default function LoginScreen() {
       if (currentUser.role === "Admin") {
         router.replace("/(admin)");
       } else {
-        router.replace("/(tab)/home");
+        router.replace("/(tab)/feed");
       }
     }
   }, [authLoading, isAuthenticated, currentUser]);
@@ -65,7 +65,7 @@ export default function LoginScreen() {
       if (result.user?.role === "Admin") {
         router.replace("/(admin)");
       } else {
-        router.replace("/(tab)/home");
+        router.replace("/(tab)/feed");
       }
     } catch (err: any) {
       setErrorMessage(err.message || "An unexpected connection error occurred.");

@@ -25,6 +25,7 @@ import { useApp } from "@/context/AppContext";
 import { createItem, deleteItem, getCategories, getItemById, updateItem } from "@/services/items";
 import { uploadImage } from "@/services/uploads";
 import { Category, Item, ItemType } from "@/types";
+import { appAlert, appConfirm } from "@/utils/alert";
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -55,9 +56,22 @@ function isNotFutureDate(value: string): boolean {
 
 export default function ReportScreen() {
   const { currentUserId, currentUser, items, setItems } = useApp();
-  const searchParams = useLocalSearchParams<{ id?: string; editId?: string; itemId?: string }>();
+  const searchParams = useLocalSearchParams<{ id?: string; editId?: string; itemId?: string; from?: string }>();
   const activeEditId = searchParams.editId || searchParams.itemId || searchParams.id || null;
   const isEditMode = Boolean(activeEditId);
+  const from = searchParams.from;
+
+  const handleBack = () => {
+    if (from === "admin" || currentUser?.role === "Admin") {
+      router.replace("/(admin)/admin-management" as any);
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tab)/feed" as any);
+    }
+  };
 
   // Form field state
   const [type, setType] = useState<ItemType>("Lost");
@@ -425,26 +439,23 @@ export default function ReportScreen() {
           );
         }
 
-        Alert.alert("Success", "Your item report has been updated.", [
-          {
-            text: "View Details",
-            onPress: () => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.push({
-                  pathname: "/report/item/[id]",
-                  params: { id: activeEditId },
-                } as any);
-              }
-            },
-          },
-        ]);
+        appAlert("Success", "Your item report has been updated.", () => {
+          if (from === "admin" || currentUser?.role === "Admin") {
+            router.replace("/(admin)/admin-management" as any);
+          } else if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.push({
+              pathname: "/report/item/[id]",
+              params: { id: activeEditId },
+            } as any);
+          }
+        });
       } catch (err: any) {
         const message =
           err.response?.data?.message ||
           "Failed to update item report. Please try again.";
-        Alert.alert("Update Failed", message);
+        appAlert("Update Failed", message);
       } finally {
         setIsSubmitting(false);
       }
@@ -485,12 +496,13 @@ export default function ReportScreen() {
       setSubmitAttempted(false);
       setCategoryError(null);
 
-      Alert.alert("Success", "Your item report has been published.", [
-        {
-          text: "View in Feed",
-          onPress: () => router.push("/feed" as any),
-        },
-      ]);
+      appAlert("Success", "Your item report has been published.", () => {
+        if (from === "admin" || currentUser?.role === "Admin") {
+          router.replace("/(admin)/admin-management" as any);
+        } else {
+          router.push("/feed" as any);
+        }
+      });
     } catch (err: any) {
       // Show the server's own message; fall back to a generic user-friendly string.
       // Raw Node.js error strings are not exposed to the user.
@@ -506,44 +518,34 @@ export default function ReportScreen() {
   const handleDeleteReport = () => {
     if (!activeEditId || isDeleting) return;
 
-    Alert.alert(
+    appConfirm(
       "Delete Report?",
       "Are you sure you want to delete this report? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            if (isDeleting) return;
-            setIsDeleting(true);
-            try {
-              await deleteItem(activeEditId, currentUserId);
-              setItems((prev) => prev.filter((i) => i.id !== activeEditId));
+      async () => {
+        if (isDeleting) return;
+        setIsDeleting(true);
+        try {
+          await deleteItem(activeEditId, currentUserId);
+          setItems((prev) => prev.filter((i) => i.id !== activeEditId));
 
-              Alert.alert("Deleted", "Your report has been deleted.", [
-                {
-                  text: "OK",
-                  onPress: () => {
-                    if (router.canGoBack()) {
-                      router.back();
-                    } else {
-                      router.push("/feed" as any);
-                    }
-                  },
-                },
-              ]);
-            } catch (err: any) {
-              const msg =
-                err.response?.data?.message ||
-                "Failed to delete item report. Please try again.";
-              Alert.alert("Deletion Failed", msg);
-            } finally {
-              setIsDeleting(false);
+          appAlert("Deleted", "Your report has been deleted.", () => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push("/feed" as any);
             }
-          },
-        },
-      ]
+          });
+        } catch (err: any) {
+          const msg =
+            err.response?.data?.message ||
+            "Failed to delete item report. Please try again.";
+          appAlert("Deletion Failed", msg);
+        } finally {
+          setIsDeleting(false);
+        }
+      },
+      undefined,
+      "Delete"
     );
   };
 
@@ -557,7 +559,7 @@ export default function ReportScreen() {
   if (isEditMode && isLoadingItem) {
     return (
       <SafeAreaView edges={["top"]} style={styles.screen}>
-        <AppHeader showBack title="Edit Report" />
+        <AppHeader onPressBack={handleBack} showBack title="Edit Report" />
         <View style={styles.stateContainer}>
           <ActivityIndicator color={COLORS.primary} size="large" />
           <Text style={styles.stateLoadingText}>Loading report details...</Text>
@@ -569,20 +571,14 @@ export default function ReportScreen() {
   if (isEditMode && itemLoadError) {
     return (
       <SafeAreaView edges={["top"]} style={styles.screen}>
-        <AppHeader showBack title="Edit Report" />
+        <AppHeader onPressBack={handleBack} showBack title="Edit Report" />
         <View style={styles.stateContainer}>
           <Ionicons color={COLORS.danger} name="alert-circle-outline" size={48} />
           <Text style={styles.stateErrorTitle}>Unable to Edit Report</Text>
           <Text style={styles.stateErrorMessage}>{itemLoadError}</Text>
           <TouchableOpacity
             accessibilityRole="button"
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.push("/feed" as any);
-              }
-            }}
+            onPress={handleBack}
             style={styles.stateBackButton}
           >
             <Text style={styles.stateBackButtonText}>Go Back</Text>
@@ -595,7 +591,8 @@ export default function ReportScreen() {
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <AppHeader
-        showBack={isEditMode}
+        showBack={true}
+        onPressBack={handleBack}
         subtitle={
           isEditMode
             ? "Update your lost or found item details"

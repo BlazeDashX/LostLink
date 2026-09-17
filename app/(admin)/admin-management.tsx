@@ -9,6 +9,8 @@ import { User, Item, Claim } from "@/types";
 import { getAllUsers, updateUserStatus, deleteUser } from "@/services/users";
 import { getAllItems, updateItem, deleteItem } from "@/services/items";
 import { getAllClaims } from "@/services/claims";
+import ConfirmModal from "@/components/confirmModal";
+import { appAlert } from "@/utils/alert";
 
 const COLORS = {
   primary: "#2563EB",
@@ -31,8 +33,8 @@ type Tab = "Users" | "Items" | "Claims";
 
 export default function AdminManagementScreen() {
   const router = useRouter();
-  const { currentUserId, items, setItems, claims } = useApp();
-  console.log("ADMIN MANAGEMENT - claims:", claims);
+  const { currentUserId, currentUser, items, setItems, claims } = useApp();
+  const adminId = currentUserId || currentUser?.id || "A001";
 
   const [tab, setTab] = useState<Tab>("Users");
   const [query, setQuery] = useState("");
@@ -53,6 +55,22 @@ export default function AdminManagementScreen() {
   const [backendClaims, setBackendClaims] = useState<Claim[]>([]);
   const [isLoadingClaims, setIsLoadingClaims] = useState(false);
   const [claimsError, setClaimsError] = useState<string | null>(null);
+
+  // ── In-App Confirmation Modal State (Universal Web/Native) ───────────
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    destructive?: boolean;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
 
   // ── Database Fetching Callbacks ─────────────────────────────────────
   const fetchUsers = useCallback(async () => {
@@ -191,76 +209,69 @@ export default function AdminManagementScreen() {
     }
   }
 
-  // ── Database Mutation Handlers (Persist & Refresh) ─────────────────
+  // ── Database Mutation Handlers (Persist & Refresh via In-App Modal) ──
   function toggleUserStatus(user: User) {
     if (user.id === adminId) {
-      Alert.alert("Not allowed", "You cannot suspend your own active session.");
+      appAlert("Not allowed", "You cannot suspend your own active session.");
       return;
     }
     if (isUpdatingUser || isDeletingUser) return;
 
     const nextStatus = user.status === "Active" ? "Suspended" : "Active";
 
-    Alert.alert(
-      nextStatus === "Suspended" ? "Suspend user?" : "Activate user?",
-      `${user.name} will be marked ${nextStatus} in PostgreSQL.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Confirm",
-          style: nextStatus === "Suspended" ? "destructive" : "default",
-          onPress: async () => {
-            setIsUpdatingUser(true);
-            try {
-              await updateUserStatus(adminId, user.id, nextStatus as "Active" | "Suspended");
-              // Refresh state directly from database
-              await fetchUsers();
-            } catch (err: any) {
-              Alert.alert("Error", err?.response?.data?.message ?? "Failed to update user status.");
-            } finally {
-              setIsUpdatingUser(false);
-            }
-          },
-        },
-      ]
-    );
+    setConfirmModal({
+      visible: true,
+      title: nextStatus === "Suspended" ? "Suspend User?" : "Activate User?",
+      message: `${user.name} will be marked as ${nextStatus} in the PostgreSQL database.`,
+      confirmLabel: nextStatus === "Suspended" ? "Suspend" : "Activate",
+      destructive: nextStatus === "Suspended",
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, visible: false }));
+        setIsUpdatingUser(true);
+        try {
+          await updateUserStatus(adminId, user.id, nextStatus as "Active" | "Suspended");
+          await fetchUsers();
+          appAlert("Success", `${user.name} is now ${nextStatus}.`);
+        } catch (err: any) {
+          appAlert("Error", err?.response?.data?.message ?? "Failed to update user status.");
+        } finally {
+          setIsUpdatingUser(false);
+        }
+      },
+    });
   }
 
   function handleDeleteUser(user: User) {
     if (user.id === adminId) {
-      Alert.alert("Not allowed", "You cannot delete your own active session.");
+      appAlert("Not allowed", "You cannot delete your own active session.");
       return;
     }
     if (user.role === "Admin") {
-      Alert.alert("Not allowed", "You cannot delete an Administrator.");
+      appAlert("Not allowed", "You cannot delete an Administrator.");
       return;
     }
     if (isDeletingUser || isUpdatingUser) return;
 
-    Alert.alert(
-      "Delete Member?",
-      `Are you sure you want to permanently delete "${user.name}" (${user.id})? All associated posts and claims will be removed from PostgreSQL.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setIsDeletingUser(true);
-            try {
-              await deleteUser(adminId, user.id);
-              // Refresh state directly from database
-              await fetchUsers();
-              Alert.alert("Success", `User "${user.name}" was permanently deleted.`);
-            } catch (err: any) {
-              Alert.alert("Error", err?.response?.data?.message ?? "Failed to delete user.");
-            } finally {
-              setIsDeletingUser(false);
-            }
-          },
-        },
-      ]
-    );
+    setConfirmModal({
+      visible: true,
+      title: "Delete Member?",
+      message: `Are you sure you want to permanently delete "${user.name}" (${user.id})? All associated posts and claims will be removed from PostgreSQL.`,
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, visible: false }));
+        setIsDeletingUser(true);
+        try {
+          await deleteUser(adminId, user.id);
+          await fetchUsers();
+          appAlert("Success", `User "${user.name}" was permanently deleted.`);
+        } catch (err: any) {
+          appAlert("Error", err?.response?.data?.message ?? "Failed to delete user.");
+        } finally {
+          setIsDeletingUser(false);
+        }
+      },
+    });
   }
 
   function toggleItemVisibility(item: Item) {
@@ -268,58 +279,51 @@ export default function AdminManagementScreen() {
 
     const nextStatus = item.status === "Hidden" ? "Active" : "Hidden";
 
-    Alert.alert(
-      nextStatus === "Hidden" ? "Hide report?" : "Restore report?",
-      `${item.title} will be marked ${nextStatus} in PostgreSQL.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Confirm",
-          style: nextStatus === "Hidden" ? "destructive" : "default",
-          onPress: async () => {
-            setIsUpdatingItem(true);
-            try {
-              await updateItem(item.id, { status: nextStatus }, adminId);
-              // Refresh state directly from database
-              await fetchItems();
-            } catch (err: any) {
-              Alert.alert("Error", err?.response?.data?.message ?? "Failed to update item visibility.");
-            } finally {
-              setIsUpdatingItem(false);
-            }
-          },
-        },
-      ]
-    );
+    setConfirmModal({
+      visible: true,
+      title: nextStatus === "Hidden" ? "Hide Report?" : "Restore Report?",
+      message: `"${item.title}" will be marked as ${nextStatus} in the PostgreSQL database.`,
+      confirmLabel: nextStatus === "Hidden" ? "Hide" : "Restore",
+      destructive: nextStatus === "Hidden",
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, visible: false }));
+        setIsUpdatingItem(true);
+        try {
+          await updateItem(item.id, { status: nextStatus }, adminId);
+          await fetchItems();
+          appAlert("Success", `Report "${item.title}" is now ${nextStatus}.`);
+        } catch (err: any) {
+          appAlert("Error", err?.response?.data?.message ?? "Failed to update item visibility.");
+        } finally {
+          setIsUpdatingItem(false);
+        }
+      },
+    });
   }
 
   function handleDeleteItem(item: Item) {
     if (isDeletingItem || isUpdatingItem) return;
 
-    Alert.alert(
-      "Delete Report?",
-      `Are you sure you want to permanently delete "${item.title}" (${item.id})? This will delete the report and its claims from PostgreSQL.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setIsDeletingItem(true);
-            try {
-              await deleteItem(item.id, adminId);
-              // Refresh state directly from database
-              await fetchItems();
-              Alert.alert("Success", `Report "${item.title}" was permanently deleted.`);
-            } catch (err: any) {
-              Alert.alert("Error", err?.response?.data?.message ?? "Failed to delete report.");
-            } finally {
-              setIsDeletingItem(false);
-            }
-          },
-        },
-      ]
-    );
+    setConfirmModal({
+      visible: true,
+      title: "Delete Report?",
+      message: `Are you sure you want to permanently delete "${item.title}" (${item.id})? This will delete the report and its claims from PostgreSQL.`,
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, visible: false }));
+        setIsDeletingItem(true);
+        try {
+          await deleteItem(item.id, adminId);
+          await fetchItems();
+          appAlert("Success", `Report "${item.title}" was permanently deleted.`);
+        } catch (err: any) {
+          appAlert("Error", err?.response?.data?.message ?? "Failed to delete report.");
+        } finally {
+          setIsDeletingItem(false);
+        }
+      },
+    });
   }
 
   return (
@@ -564,7 +568,12 @@ export default function AdminManagementScreen() {
             return (
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => router.push({ pathname: "/report/claim/review" as any, params: { claimId: claim.id } })}
+                onPress={() =>
+                  router.push({
+                    pathname: "/report/claim/review" as any,
+                    params: { claimId: claim.id, from: "admin" },
+                  })
+                }
                 accessibilityRole="button"
                 accessibilityLabel={`Review claim ${claim.id}`}
               >
@@ -587,9 +596,21 @@ export default function AdminManagementScreen() {
       )}
 
       <View style={styles.footerNotice}>
-        <Text style={styles.footerNoticeTitle}>Destructive actions require Alert confirmation.</Text>
+        <Text style={styles.footerNoticeTitle}>Destructive actions require confirmation.</Text>
         <Text style={styles.footerNoticeSubtitle}>Changes are permanently saved to the PostgreSQL database.</Text>
       </View>
+
+      {/* In-App Confirmation Modal */}
+      <ConfirmModal
+        visible={confirmModal.visible}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmLabel={confirmModal.confirmLabel}
+        cancelLabel={confirmModal.cancelLabel}
+        destructive={confirmModal.destructive}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }
