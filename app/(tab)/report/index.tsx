@@ -25,6 +25,7 @@ import { useApp } from "@/context/AppContext";
 import { createItem, deleteItem, getCategories, getItemById, updateItem } from "@/services/items";
 import { uploadImage } from "@/services/uploads";
 import { Category, Item, ItemType } from "@/types";
+import { appAlert, appConfirm } from "@/utils/alert";
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -506,44 +507,34 @@ export default function ReportScreen() {
   const handleDeleteReport = () => {
     if (!activeEditId || isDeleting) return;
 
-    Alert.alert(
+    appConfirm(
       "Delete Report?",
       "Are you sure you want to delete this report? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            if (isDeleting) return;
-            setIsDeleting(true);
-            try {
-              await deleteItem(activeEditId, currentUserId);
-              setItems((prev) => prev.filter((i) => i.id !== activeEditId));
+      async () => {
+        if (isDeleting) return;
+        setIsDeleting(true);
+        try {
+          await deleteItem(activeEditId, currentUserId);
+          setItems((prev) => prev.filter((i) => i.id !== activeEditId));
 
-              Alert.alert("Deleted", "Your report has been deleted.", [
-                {
-                  text: "OK",
-                  onPress: () => {
-                    if (router.canGoBack()) {
-                      router.back();
-                    } else {
-                      router.push("/feed" as any);
-                    }
-                  },
-                },
-              ]);
-            } catch (err: any) {
-              const msg =
-                err.response?.data?.message ||
-                "Failed to delete item report. Please try again.";
-              Alert.alert("Deletion Failed", msg);
-            } finally {
-              setIsDeleting(false);
+          appAlert("Deleted", "Your report has been deleted.", () => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push("/feed" as any);
             }
-          },
-        },
-      ]
+          });
+        } catch (err: any) {
+          const msg =
+            err.response?.data?.message ||
+            "Failed to delete item report. Please try again.";
+          appAlert("Deletion Failed", msg);
+        } finally {
+          setIsDeleting(false);
+        }
+      },
+      undefined,
+      "Delete"
     );
   };
 

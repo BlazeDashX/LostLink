@@ -59,10 +59,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 32,
   },
-  card: { width: "100%",
-      backgroundColor: "#FFFFFF",
-      borderRadius: 16, 
-      padding: 20 },
+  card: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+  },
 
   title: { fontSize: 16,
      fontWeight: "700", 
