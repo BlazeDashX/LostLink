@@ -26,7 +26,6 @@ export default function TabLayout() {
         tabBarStyle: isAdmin ? { display: "none" } : undefined,
       }}
     >
-      <Tabs.Screen name="home" options={{ title: "Home" }} />
       <Tabs.Screen name="feed" options={{ title: "Feed" }} />
       <Tabs.Screen name="report" options={{ title: "Report" }} />
       <Tabs.Screen name="Inbox" options={{ title: "Inbox" }} />

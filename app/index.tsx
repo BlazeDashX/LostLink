@@ -14,7 +14,7 @@ import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 
 export default function SplashScreen() {
-  const { isAuthenticated, currentUserId, users, authLoading } = useApp();
+  const { isAuthenticated, currentUser, currentUserId, users, authLoading } = useApp();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
@@ -46,11 +46,11 @@ export default function SplashScreen() {
     const timer = setTimeout(() => {
       if (!authLoading) {
         if (isAuthenticated) {
-          const currentUser = users.find((user) => user.id === currentUserId);
-          if (currentUser?.role === "Admin") {
+          const user = currentUser || users.find((u) => u.id === currentUserId);
+          if (user?.role === "Admin") {
             router.replace("/(admin)");
           } else {
-            router.replace("/(tab)/home");
+            router.replace("/(tab)/feed");
           }
         } else {
           router.replace("/(auth)/login");
@@ -59,7 +59,7 @@ export default function SplashScreen() {
     }, 2200);
 
     return () => clearTimeout(timer);
-  }, [authLoading, isAuthenticated, currentUserId, users, fadeAnim, scaleAnim, subtitleAnim]);
+  }, [authLoading, isAuthenticated, currentUser, currentUserId, users, fadeAnim, scaleAnim, subtitleAnim]);
 
   return (
     <SafeAreaView
