@@ -108,7 +108,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={["top"]} style={styles.screen}>
       <AppHeader title="Profile" />
 
       <ScrollView

@@ -231,13 +231,16 @@ export default function RegisterScreen() {
         success: true,
       });
     } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        "Registration failed. Please try again.";
+      const serverMsg = error.response?.data?.message;
+      const networkMsg = error.code === "ECONNABORTED"
+        ? `Server took too long to respond (${BASE_URL}). Please try again.`
+        : error.message === "Network Error"
+        ? `Cannot reach server at ${BASE_URL}. Please check internet connection.`
+        : "Registration failed. Please try again.";
 
       setFeedback({
         title: "Registration Failed",
-        message,
+        message: serverMsg || networkMsg,
         success: false,
       });
     } finally {

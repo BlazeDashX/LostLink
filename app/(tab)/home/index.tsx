@@ -4,11 +4,11 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppHeader from "@/components/app-header";
 import EmptyState from "@/components/empty-state";
@@ -76,7 +76,7 @@ export default function HomeScreen() {
   ).length;
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={["top"]} style={styles.screen}>
       <AppHeader
         onPressNotification={() => router.push("/home/notifications" as any)}
         subtitle={currentUser?.name ? `Welcome back, ${currentUser.name}` : "Your personal activity overview"}
