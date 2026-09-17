@@ -568,7 +568,12 @@ export default function AdminManagementScreen() {
             return (
               <TouchableOpacity
                 style={styles.row}
-                onPress={() => router.push({ pathname: "/report/claim/review" as any, params: { claimId: claim.id } })}
+                onPress={() =>
+                  router.push({
+                    pathname: "/report/claim/review" as any,
+                    params: { claimId: claim.id, from: "admin" },
+                  })
+                }
                 accessibilityRole="button"
                 accessibilityLabel={`Review claim ${claim.id}`}
               >

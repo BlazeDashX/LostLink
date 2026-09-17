@@ -209,7 +209,10 @@ export default function ItemDetailsScreen() {
     if (!currentUserClaim) return;
     router.push({
       pathname: "/report/claim/review",
-      params: { claimId: currentUserClaim.id },
+      params: {
+        claimId: currentUserClaim.id,
+        from: from || (currentUser?.role === "Admin" ? "admin" : undefined),
+      },
     } as any);
   };
 
@@ -342,7 +345,10 @@ export default function ItemDetailsScreen() {
                       onPress={() => {
                         router.push({
                           pathname: "/report/claim/review",
-                          params: { claimId: c.id },
+                          params: {
+                            claimId: c.id,
+                            from: from || (currentUser?.role === "Admin" ? "admin" : undefined),
+                          },
                         } as any);
                       }}
                       style={styles.claimListItem}
