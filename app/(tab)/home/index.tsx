@@ -1,63 +1,137 @@
-import { Redirect, router } from "expo-router";
-import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import AppHeader from "@/components/app-header";
 import EmptyState from "@/components/empty-state";
 import ItemSummaryCard from "@/components/item-summary-card";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { getMyReports } from "@/services/items";
+import { Item } from "@/types";
 
 export default function HomeScreen() {
   const { currentUserId, currentUser, items, claims, notifications } = useApp();
 
-  if (currentUser?.role === "Admin") {
-    return <Redirect href="/(admin)" />;
-  }
+  const [myReports, setMyReports] = useState<Item[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchUserDashboard = useCallback(async () => {
+    if (!currentUserId) return;
+    try {
+      const userReports = await getMyReports(currentUserId);
+      setMyReports(userReports);
+    } catch (err) {
+      console.warn("Error loading user dashboard reports:", err);
+      // Fallback to filtering items by current user
+      const localUserReports = items.filter((item) => item.reporterId === currentUserId);
+      setMyReports(localUserReports);
+    }
+  }, [currentUserId, items]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      setIsLoading(true);
+      await fetchUserDashboard();
+      if (isMounted) setIsLoading(false);
+    }
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchUserDashboard]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchUserDashboard();
+    setIsRefreshing(false);
+  };
 
   const userNotifications = notifications.filter(
     (n) => n.userId === currentUserId
   );
   const unreadCount = userNotifications.filter((n) => !n.read).length;
 
-  const lostCount = items.filter((item) => item.type === "Lost" && item.status === "Active").length;
-  const foundCount = items.filter((item) => item.type === "Found" && item.status === "Active").length;
-  const pendingClaimsCount = claims.filter((claim) => claim.status === "Pending").length;
+  const displayReports = myReports.length > 0
+    ? myReports
+    : items.filter((item) => item.reporterId === currentUserId);
+
+  const myLostCount = displayReports.filter((item) => item.type === "Lost").length;
+  const myFoundCount = displayReports.filter((item) => item.type === "Found").length;
+  const myPendingClaimsCount = claims.filter(
+    (claim) =>
+      (claim.claimantId === currentUserId ||
+        displayReports.some((item) => item.id === claim.itemId)) &&
+      claim.status === "Pending"
+  ).length;
 
   return (
     <SafeAreaView style={styles.screen}>
       <AppHeader
         onPressNotification={() => router.push("/home/notifications" as any)}
-        subtitle="Reconnecting lost items with owners"
-        title="LostLink Home"
+        subtitle={currentUser?.name ? `Welcome back, ${currentUser.name}` : "Your personal activity overview"}
+        title="Dashboard"
         unreadCount={unreadCount}
       />
 
       <FlatList
         contentContainerStyle={styles.content}
-        data={items}
+        data={displayReports}
         keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            colors={[COLORS.primary]}
+            onRefresh={handleRefresh}
+            refreshing={isRefreshing}
+            tintColor={COLORS.primary}
+          />
+        }
         ListHeaderComponent={
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{lostCount}</Text>
-              <Text style={styles.statLabel}>Lost Items</Text>
+          <View>
+            <View style={styles.statsContainer}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>{myLostCount}</Text>
+                <Text style={styles.statLabel}>My Lost</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>{myFoundCount}</Text>
+                <Text style={styles.statLabel}>My Found</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>{myPendingClaimsCount}</Text>
+                <Text style={styles.statLabel}>My Claims</Text>
+              </View>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{foundCount}</Text>
-              <Text style={styles.statLabel}>Found Items</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{pendingClaimsCount}</Text>
-              <Text style={styles.statLabel}>Pending Claims</Text>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>My Reported Items</Text>
+              <Text style={styles.sectionCount}>({displayReports.length})</Text>
             </View>
           </View>
         }
         ListEmptyComponent={
-          <EmptyState
-            icon="albums-outline"
-            message="No reported items available at the moment."
-            title="No items found"
-          />
+          isLoading ? (
+            <View style={{ paddingVertical: SPACING.xl, alignItems: "center" }}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+            </View>
+          ) : (
+            <EmptyState
+              icon="document-text-outline"
+              message="You haven't reported any lost or found items yet. Tap 'Report' below to add one."
+              title="No reports submitted"
+            />
+          )
         }
         renderItem={({ item }) => (
           <View style={styles.itemWrapper}>
@@ -88,5 +162,21 @@ const styles = StyleSheet.create({
   },
   statNumber: { color: COLORS.primary, fontSize: 20, fontWeight: "800" },
   statLabel: { color: COLORS.textMuted, fontSize: 11, fontWeight: "600", marginTop: 2 },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  sectionTitle: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  sectionCount: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   itemWrapper: { marginBottom: SPACING.md },
 });

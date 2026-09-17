@@ -31,8 +31,8 @@ type Tab = "Users" | "Items" | "Claims";
 
 export default function AdminManagementScreen() {
   const router = useRouter();
-  const { currentUserId, currentUser } = useApp();
-  const adminId = currentUserId || currentUser?.id || "A001";
+  const { currentUserId, items, setItems, claims } = useApp();
+  console.log("ADMIN MANAGEMENT - claims:", claims);
 
   const [tab, setTab] = useState<Tab>("Users");
   const [query, setQuery] = useState("");
@@ -111,6 +111,8 @@ export default function AdminManagementScreen() {
             getAllItems(adminId),
             getAllClaims(adminId),
           ]);
+          console.log("ADMIN - usersData:", usersData);
+          console.log("ADMIN - itemsData:", itemsData);
           if (!cancelled) {
             setBackendUsers(Array.isArray(usersData) ? usersData : []);
             setBackendItems(Array.isArray(itemsData) ? itemsData : []);

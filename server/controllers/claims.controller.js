@@ -4,6 +4,7 @@ const claimsQueries = require("../queries/claims.queries");
 // POST /api/claims - Submit a new claim
 async function createClaim(req, res) {
   const { itemId, claimantId, answers, handoverMethod } = req.body;
+  const effectiveClaimantId = req.user?.id || claimantId;
 
   // Extract identifying details either from answers object or top-level
   const identifyingDetail = answers?.identifyingDetail || req.body.identifyingDetail;
@@ -11,7 +12,7 @@ async function createClaim(req, res) {
   const privateEvidence = answers?.privateEvidence || req.body.privateEvidence;
   const method = handoverMethod || req.body.handover_method;
 
-  if (!itemId || !claimantId || !identifyingDetail || !lossContext || !privateEvidence || !method) {
+  if (!itemId || !effectiveClaimantId || !identifyingDetail || !lossContext || !privateEvidence || !method) {
     return res.status(400).json({
       message: "All fields are required (itemId, claimantId, identifying details, loss context, private evidence, handover method).",
     });
@@ -27,14 +28,14 @@ async function createClaim(req, res) {
     }
 
     // 2. Prevent self-claim
-    if (item.reporter_id === claimantId) {
+    if (item.reporter_id === effectiveClaimantId) {
       return res.status(403).json({
         message: "The reporter cannot claim their own item.",
       });
     }
 
     // 3. Check for existing active claim
-    const existingClaim = await claimsQueries.findActiveClaimByClaimant(client, itemId, claimantId);
+    const existingClaim = await claimsQueries.findActiveClaimByClaimant(client, itemId, effectiveClaimantId);
     if (existingClaim) {
       return res.status(409).json({
         message: "You already have an active claim for this item.",
@@ -48,7 +49,7 @@ async function createClaim(req, res) {
     const claimPayload = {
       id: claimId,
       itemId,
-      claimantId,
+      claimantId: effectiveClaimantId,
       identifyingDetail,
       lossContext,
       privateEvidence,
@@ -160,7 +161,17 @@ async function updateClaimDecision(req, res) {
     }
 
     const item = await claimsQueries.getItemById(client, claim.itemId);
-    const reviewer = reviewedBy || null;
+    const reviewer = req.user ? req.user.id : (reviewedBy || null);
+
+    const isReporter = item && item.reporter_id === reviewer;
+    const isAdmin = req.user?.role === "Admin";
+
+    if (req.user && !isReporter && !isAdmin) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({
+        message: "Forbidden: Only the item reporter or an administrator can review or decide on this claim.",
+      });
+    }
 
     if (status === "Approved") {
       // 1. Approve current claim

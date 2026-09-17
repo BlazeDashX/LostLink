@@ -2,6 +2,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
+const usersRoutes = require("./routes/users.routes");
+const itemsRoutes = require("./routes/items.routes");
+const adminRoutes = require("./routes/admin.routes");
 
 const {
   findUserByEmail,
@@ -10,11 +13,9 @@ const {
 
 const path = require("path");
 const categoriesRoutes = require("./routes/categories.routes");
-const itemsRoutes = require("./routes/items.routes");
-const uploadsRoutes = require("./routes/uploads.routes");
-const adminRoutes = require("./routes/admin.routes");
-const usersRoutes = require("./routes/users.routes");
 const claimsRoutes = require("./routes/claims.routes");
+const conversationsRoutes = require("./routes/conversations.routes");
+const uploadsRoutes = require("./routes/uploads.routes");
 
 const app = express();
 
@@ -23,21 +24,23 @@ app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 app.use(cors());
 
-// Serve uploaded media files persistently
+// Serve static uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Mount API Routes
+app.use("/api/claims", claimsRoutes);
+app.use("/api/categories", categoriesRoutes);
+app.use("/api/conversations", conversationsRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/items", itemsRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/uploads", uploadsRoutes);
 
 app.get("/", (req, res) => {
   res.json({
     message: "LostLink API is running",
   });
 });
-
-app.use("/api/categories", categoriesRoutes);
-app.use("/api/items", itemsRoutes);
-app.use("/api/uploads", uploadsRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/users", usersRoutes);
-app.use("/api/claims", claimsRoutes);
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, phone, password } = req.body;
@@ -98,12 +101,18 @@ app.post("/api/auth/login", async (req, res) => {
 
   let passwordMatches = false;
 
-  if (user.password.startsWith("$2")) {
-    passwordMatches = await bcrypt.compare(
-      password,
-      user.password
-    );
-  } else {
+  if (user.password && user.password.startsWith("$2")) {
+    try {
+      passwordMatches = await bcrypt.compare(
+        password,
+        user.password
+      );
+    } catch (e) {
+      console.log("bcrypt compare error:", e.message);
+    }
+  }
+
+  if (!passwordMatches && user.password) {
     passwordMatches = user.password === password;
   }
 
@@ -138,7 +147,13 @@ app.post(
       });
     }
 
-    const user = await findUserByEmail(email);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Valid email is required",
+      });
+    }
 
     return res.status(200).json({
       message:
@@ -147,8 +162,8 @@ app.post(
   }
 );
 
-app.listen(3000, () => {
-  console.log(
-    "LostLink server is running on port 3000"
-  );
+const PORT = Number(process.env.PORT) || 3000;
+
+app.listen(PORT, () => {
+  console.log(`LostLink server is running on port ${PORT}`);
 });

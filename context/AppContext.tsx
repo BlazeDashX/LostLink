@@ -9,10 +9,10 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import usersData from "@/data/users.json";
-import itemsData from "@/data/items.json";
 import messagesData from "@/data/message.json";
 import claimsData from "@/data/claims.json";
 import notificationsData from "@/data/notifications.json";
+import { getAllItems } from "@/services/items";
 
 import {
   User,
@@ -39,9 +39,18 @@ interface ActionResponse {
   user?: SafeUser;
 }
 
+/*
+ * users.json is only a temporary local seed source.
+ * The password field is removed before users enter client state.
+ */
+type LocalUser = User & {
+  password?: string;
+};
+
 interface AppContextType {
   currentUserId: string | null;
   currentUser: SafeUser | null;
+
   setCurrentUserId: React.Dispatch<
     React.SetStateAction<string | null>
   >;
@@ -70,8 +79,8 @@ interface AppContextType {
 
   // Claim Actions
   submitClaim: (data: SubmitClaimData) => Promise<ActionResponse>;
-  approveClaim: (claimId: string) => ActionResponse;
-  rejectClaim: (claimId: string) => ActionResponse;
+  approveClaim: (claimId: string) => Promise<ActionResponse>;
+  rejectClaim: (claimId: string) => Promise<ActionResponse>;
   getClaimById: (claimId: string) => Claim | undefined;
   getClaimsByItem: (itemId: string) => Claim[];
 
@@ -84,12 +93,16 @@ interface AppContextType {
     password: string
   ) => Promise<ActionResponse>;
 
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
-export function AppProvider({ children }: { children: ReactNode }) {
+export function AppProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(
     null
   );
@@ -106,15 +119,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setUsers(
-      (usersData as User[]).map(
-        ({ password, ...user }) => user
+      (usersData as LocalUser[]).map(
+        ({ password: _password, ...user }) => user
       )
     );
 
-    setItems(itemsData as Item[]);
+    setItems([]);
     setMessages(messagesData as Message[]);
     setClaims(claimsData as Claim[]);
     setNotifications(notificationsData as Notification[]);
+
+    const fetchDbItems = async (userId?: string | null) => {
+      try {
+        const freshItems = await getAllItems(userId);
+        if (freshItems && Array.isArray(freshItems)) {
+          setItems(freshItems);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch initial items from PostgreSQL:", err);
+      }
+    };
+
+    fetchDbItems();
 
     const restoreSession = async () => {
       try {
@@ -122,11 +148,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
           "currentUserId"
         );
 
-        if (savedUserId) {
-          setCurrentUserId(savedUserId);
+        if (!savedUserId) {
+          return;
         }
+
+        const response = await api.get(
+          `/api/users/${savedUserId}`,
+          {
+            headers:{
+              "x-user-id": savedUserId,
+            },
+          }
+        );
+
+        const restoredUser = response.data.data;
+
+        setUsers((prev) => {
+          const userExists = prev.some(
+            (user) => user.id === restoredUser.id
+          );
+
+          if (userExists) {
+            return prev.map((user) =>
+              user.id === restoredUser.id
+                ? {
+                    ...user,
+                    ...restoredUser,
+                  }
+                : user
+            );
+          }
+
+          return [...prev, restoredUser];
+        });
+
+        setCurrentUserId(restoredUser.id);
       } catch (error) {
-        console.log("Failed to restore session:", error);
+        console.log(
+          "Failed to restore session:",
+          error
+        );
+
+        await AsyncStorage.removeItem("currentUserId");
+        setCurrentUserId(null);
       } finally {
         setAuthLoading(false);
       }
@@ -195,15 +259,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await AsyncStorage.removeItem("currentUserId");
+
       setCurrentUserId(null);
     } catch (error) {
-      console.log("Failed to clear session:", error);
+      console.log(
+        "Failed to clear session:",
+        error
+      );
     }
   };
 
+  // Automatically synchronize item statuses when claims state changes
+  useEffect(() => {
+    if (claims.length === 0) return;
+    setItems((prevItems) => {
+      let changed = false;
+      const updated = prevItems.map((item) => {
+        const itemClaims = claims.filter((c) => c.itemId === item.id);
+        if (itemClaims.length === 0) return item;
+
+        let derived = item.status;
+        if (itemClaims.some((c) => c.status === "Completed")) {
+          derived = "Solved";
+        } else if (itemClaims.some((c) => c.status === "Approved")) {
+          derived = "Reserved";
+        } else if (itemClaims.some((c) => c.status === "Pending") && item.status === "Active") {
+          derived = "Pending Claim";
+        }
+
+        if (derived !== item.status) {
+          changed = true;
+          return { ...item, status: derived };
+        }
+        return item;
+      });
+      return changed ? updated : prevItems;
+    });
+  }, [claims]);
+
   const isAuthenticated = currentUserId !== null;
+
   const currentUser: SafeUser | null =
-    users.find((user) => user.id === currentUserId) ?? null;
+    users.find(
+      (user) => user.id === currentUserId
+    ) ?? null;
 
   const submitClaim = async (
     data: SubmitClaimData
@@ -252,108 +351,122 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const approveClaim = (
+  const approveClaim = async (
     claimId: string
-  ): ActionResponse => {
-    const claim = claims.find((c) => c.id === claimId);
+  ): Promise<ActionResponse> => {
+    try {
+      const response = await api.patch(`/api/claims/${claimId}`, {
+        status: "Approved",
+        reviewedBy: currentUserId,
+      });
 
-    if (!claim) {
-      return {
-        ok: false,
-        message: "Claim not found.",
-      };
-    }
+      const updatedClaim: Claim = response.data.claim;
 
-    setClaims((prev) =>
-      prev.map((c) => {
-        if (c.id === claimId) {
-          return {
-            ...c,
-            status: "Approved",
-            reviewedBy: currentUserId,
-          };
-        }
+      setClaims((prev) =>
+        prev.map((c) => {
+          if (c.id === claimId) {
+            return updatedClaim || {
+              ...c,
+              status: "Approved",
+              reviewedBy: currentUserId,
+            };
+          }
 
-        if (
-          c.itemId === claim.itemId &&
-          c.status === "Pending"
-        ) {
-          return {
-            ...c,
-            status: "Rejected",
-            reviewedBy: currentUserId,
-          };
-        }
-
-        return c;
-      })
-    );
-
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === claim.itemId
-          ? { ...i, status: "Reserved" }
-          : i
-      )
-    );
-
-    return {
-      ok: true,
-      message: "Claim approved. Item is now reserved.",
-    };
-  };
-
-  const rejectClaim = (
-    claimId: string
-  ): ActionResponse => {
-    const claim = claims.find((c) => c.id === claimId);
-
-    if (!claim) {
-      return {
-        ok: false,
-        message: "Claim not found.",
-      };
-    }
-
-    setClaims((prev) =>
-      prev.map((c) =>
-        c.id === claimId
-          ? {
+          if (
+            c.itemId === (updatedClaim?.itemId || c.itemId) &&
+            c.status === "Pending"
+          ) {
+            return {
               ...c,
               status: "Rejected",
               reviewedBy: currentUserId,
-            }
-          : c
-      )
-    );
+            };
+          }
 
-    const otherActiveClaims = claims.filter(
-      (c) =>
-        c.itemId === claim.itemId &&
-        c.id !== claimId &&
-        ["Pending", "Approved"].includes(c.status)
-    );
+          return c;
+        })
+      );
 
-    if (otherActiveClaims.length === 0) {
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === claim.itemId
-            ? { ...i, status: "Active" }
-            : i
+      const targetItemId = updatedClaim?.itemId;
+      if (targetItemId) {
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === targetItemId
+              ? { ...i, status: "Reserved" }
+              : i
+          )
+        );
+      }
+
+      return {
+        ok: true,
+        message: response.data.message || "Claim approved. Item is now reserved.",
+      };
+    } catch (error: any) {
+      return {
+        ok: false,
+        message:
+          error.response?.data?.message ||
+          "Failed to approve claim. Please try again.",
+      };
+    }
+  };
+
+  const rejectClaim = async (
+    claimId: string
+  ): Promise<ActionResponse> => {
+    try {
+      const response = await api.patch(`/api/claims/${claimId}`, {
+        status: "Rejected",
+        reviewedBy: currentUserId,
+      });
+
+      const updatedClaim: Claim = response.data.claim;
+      const newItemStatus = response.data.itemStatus;
+
+      setClaims((prev) =>
+        prev.map((c) =>
+          c.id === claimId
+            ? updatedClaim || {
+                ...c,
+                status: "Rejected",
+                reviewedBy: currentUserId,
+              }
+            : c
         )
       );
-    }
 
-    return {
-      ok: true,
-      message: "Claim rejected.",
-    };
+      const targetItemId = updatedClaim?.itemId;
+      if (targetItemId && newItemStatus) {
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === targetItemId
+              ? { ...i, status: newItemStatus }
+              : i
+          )
+        );
+      }
+
+      return {
+        ok: true,
+        message: response.data.message || "Claim rejected.",
+      };
+    } catch (error: any) {
+      return {
+        ok: false,
+        message:
+          error.response?.data?.message ||
+          "Failed to reject claim. Please try again.",
+      };
+    }
   };
 
   const getClaimById = (
     claimId: string
   ): Claim | undefined => {
-    return claims.find((c) => c.id === claimId);
+    return claims.find(
+      (c) => c.id === claimId
+    );
   };
 
   const addItem = (
@@ -370,18 +483,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     const newItem: Item = {
-      id: `I${String(items.length + 1).padStart(3, "0")}`,
+      id: `I${String(
+        items.length + 1
+      ).padStart(3, "0")}`,
       ...data,
       reporterId: currentUserId,
       status: "Active",
       createdAt: new Date().toISOString(),
     };
 
-    setItems((prev) => [newItem, ...prev]);
+    setItems((prev) => [
+      newItem,
+      ...prev,
+    ]);
 
     return {
       ok: true,
-      message: "Item reported successfully.",
+      message:
+        "Item reported successfully.",
       claimId: newItem.id,
     };
   };
@@ -389,7 +508,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getClaimsByItem = (
     itemId: string
   ): Claim[] => {
-    return claims.filter((c) => c.itemId === itemId);
+    return claims.filter(
+      (c) => c.itemId === itemId
+    );
   };
 
   return (
@@ -429,7 +550,9 @@ export function useApp() {
   const context = useContext(AppContext);
 
   if (!context) {
-    throw new Error("useApp must be used inside AppProvider.");
+    throw new Error(
+      "useApp must be used inside AppProvider."
+    );
   }
 
   return context;

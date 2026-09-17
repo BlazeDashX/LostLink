@@ -339,14 +339,13 @@ async function getItems(req, res) {
       return res.status(200).json({ items });
     }
 
-    if (req.user.role === "Admin") {
-      const items = await itemsQueries.getAllItems();
-      return res.status(200).json({ items });
-    }
+    const allItems = await itemsQueries.getAllItems();
+    const visibleItems =
+      req.user?.role === "Admin"
+        ? allItems
+        : allItems.filter((item) => item.status !== "Hidden");
 
-    return res.status(403).json({
-      message: "Forbidden. Only mine=true or Admin role is supported.",
-    });
+    return res.status(200).json({ items: visibleItems });
   } catch (error) {
     console.error("Error fetching user items:", error);
     return res.status(500).json({

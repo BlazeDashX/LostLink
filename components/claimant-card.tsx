@@ -1,13 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { COLORS, SPACING } from "@/constants/theme";
 import { User } from "@/types";
 
 interface ClaimantCardProps {
   claimant: User;
+  onMessage?: () => void;
+  isMessaging?: boolean;
 }
 
-export default function ClaimantCard({ claimant }: ClaimantCardProps) {
+export default function ClaimantCard({ claimant, onMessage, isMessaging }: ClaimantCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.avatar}>
@@ -21,6 +23,17 @@ export default function ClaimantCard({ claimant }: ClaimantCardProps) {
           <Text style={styles.detail}>{claimant.email}</Text>
         </View>
       </View>
+      {onMessage ? (
+        <TouchableOpacity
+          accessibilityLabel={`Message ${claimant.name}`}
+          accessibilityRole="button"
+          disabled={isMessaging}
+          onPress={onMessage}
+          style={styles.chatIconButton}
+        >
+          <Ionicons color={COLORS.primary} name="chatbubble-ellipses" size={20} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -50,4 +63,13 @@ const styles = StyleSheet.create({
   name: { color: COLORS.text, fontSize: 16, fontWeight: "800", marginTop: 2 },
   detailRow: { alignItems: "center", flexDirection: "row", marginTop: 4 },
   detail: { color: COLORS.textMuted, fontSize: 12, marginLeft: 4 },
+  chatIconButton: {
+    alignItems: "center",
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 20,
+    height: 40,
+    justifyContent: "center",
+    marginLeft: SPACING.sm,
+    width: 40,
+  },
 });

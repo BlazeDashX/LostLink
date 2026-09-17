@@ -1,6 +1,11 @@
 import { api } from "./api";
 import { User, UserStatus } from "../types";
 
+export interface UpdateProfileResponse {
+  message: string;
+  user: User;
+}
+
 export interface UsersResponse {
   users: User[];
 }
@@ -47,27 +52,28 @@ export async function updateUserStatus(
   return response.data;
 }
 
-export interface DeleteUserResponse {
-  message: string;
-  user: User;
-}
-
 /**
- * Permanently delete a user via DELETE /api/users/:id.
- * @param adminId Authenticated admin user ID (sent in x-user-id header)
- * @param targetUserId ID of the user to delete
+ * Update the authenticated user's profile.
+ * @param userId Authenticated user ID
+ * @param profile Editable profile information
  */
-export async function deleteUser(
-  adminId: string | null,
-  targetUserId: string
-): Promise<DeleteUserResponse> {
-  const headers: Record<string, string> = {};
-  if (adminId) {
-    headers["x-user-id"] = adminId;
+export async function updateUserProfile(
+  userId: string,
+  profile: {
+    name: string;
+    phone: string;
+    avatar?: string;
   }
-  const response = await api.delete<DeleteUserResponse>(
-    `/api/users/${targetUserId}`,
-    { headers }
+): Promise<UpdateProfileResponse> {
+  const response = await api.patch<UpdateProfileResponse>(
+    `/api/users/${userId}`,
+    profile,
+    {
+      headers: {
+        "x-user-id": userId,
+      },
+    }
   );
+
   return response.data;
 }
