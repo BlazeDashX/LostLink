@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Alert,
   View,
@@ -18,12 +18,23 @@ import { COLORS } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 
 export default function LoginScreen() {
-  const { login } = useApp();
+  const { login, isAuthenticated, currentUser, authLoading } = useApp();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Auto-redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && currentUser) {
+      if (currentUser.role === "Admin") {
+        router.replace("/(admin)");
+      } else {
+        router.replace("/(tab)/home");
+      }
+    }
+  }, [authLoading, isAuthenticated, currentUser]);
 
   const handleLogin = async () => {
     setErrorMessage(null);

@@ -1,7 +1,7 @@
-﻿const { query } = require("../db");
+const { query } = require("../db");
 
 /**
- * Retrieve all users from the PostgreSQL users table.
+ * Retrieve all users strictly from the PostgreSQL users table.
  * Passwords are never selected.
  * @returns {Promise<Array<Object>>} List of safe users
  */
@@ -49,7 +49,7 @@ async function getUserById(id) {
 }
 
 /**
- * Update a user's status field by ID.
+ * Update a user's status field in PostgreSQL by ID.
  * @param {string} id - User ID
  * @param {string} status - New status value ('Active' | 'Suspended')
  * @returns {Promise<Object|null>} Updated safe user or null if not found

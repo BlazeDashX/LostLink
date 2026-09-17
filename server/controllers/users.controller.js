@@ -1,4 +1,4 @@
-﻿const usersQueries = require("../queries/users.queries");
+const usersQueries = require("../queries/users.queries");
 
 /**
  * Controller to handle GET /api/users
@@ -167,6 +167,53 @@ async function updateUser(req, res) {
 
     return res.status(500).json({
       message: "Failed to update user.",
+    });
+  }
+}
+
+/**
+ * Controller to handle DELETE /api/users/:id
+ * Permanently removes a user and their activity — admin only.
+ * Guards:
+ *   - Only Admin role may call this endpoint.
+ *   - An admin cannot delete their own active session account.
+ */
+async function deleteUser(req, res) {
+  try {
+    // 1. Backend authorization: only Admin role
+    if (!req.user || req.user.role !== "Admin") {
+      return res.status(403).json({
+        message: "Forbidden. Admin role required.",
+      });
+    }
+
+    const { id } = req.params;
+
+    // 2. Prevent admin from deleting their own active session
+    if (id === req.user.id) {
+      return res.status(400).json({
+        message: "You cannot delete your own account.",
+      });
+    }
+
+    // 3. Perform deletion
+    const deletedUser = await usersQueries.deleteUser(id);
+
+    if (!deletedUser) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
+
+    return res.status(200).json({
+      message: `User ${deletedUser.name} was successfully deleted.`,
+      user: deletedUser,
+    });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return res.status(500).json({
+      message: "Failed to delete user.",
+      error: error.message,
     });
   }
 }

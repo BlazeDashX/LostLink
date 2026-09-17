@@ -32,7 +32,7 @@ type CategoryItem = {
 };
 
 export default function ItemDetailsScreen() {
-  const { id } = useLocalSearchParams() as { id: string };
+  const { id, from } = useLocalSearchParams() as { id: string; from?: string };
   const { claims, currentUserId, items, setItems, messages, setMessages, users } = useApp();
   const [isDeleting, setIsDeleting] = useState(false);
   const [fetchedItem, setFetchedItem] = useState<Item | null>(null);
@@ -122,10 +122,22 @@ export default function ItemDetailsScreen() {
     );
   }, [claims, currentUserId, item]);
 
+  const handleBack = () => {
+    if (from === "admin" || currentUser?.role === "Admin") {
+      router.replace("/(admin)/admin-management" as any);
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tab)/feed" as any);
+    }
+  };
+
   if (!id || !item) {
     return (
       <SafeAreaView style={styles.screen}>
-        <AppHeader showBack title="Item Details" />
+        <AppHeader showBack onPressBack={handleBack} title="Item Details" />
         <EmptyState
           icon="alert-circle-outline"
           message="The requested item could not be found or has been removed."
@@ -222,7 +234,9 @@ export default function ItemDetailsScreen() {
                 {
                   text: "OK",
                   onPress: () => {
-                    if (router.canGoBack()) {
+                    if (from === "admin" || currentUser?.role === "Admin") {
+                      router.replace("/(admin)/admin-management" as any);
+                    } else if (router.canGoBack()) {
                       router.back();
                     } else {
                       router.push("/feed" as any);
@@ -246,7 +260,12 @@ export default function ItemDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <AppHeader showBack subtitle={`Item Ref: ${item.id}`} title="Item Details" />
+      <AppHeader
+        showBack
+        onPressBack={handleBack}
+        subtitle={`Item Ref: ${item.id}`}
+        title="Item Details"
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.mainCard}>

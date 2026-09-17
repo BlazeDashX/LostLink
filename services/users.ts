@@ -26,7 +26,7 @@ export async function getAllUsers(userId?: string | null): Promise<User[]> {
     headers["x-user-id"] = userId;
   }
   const response = await api.get<UsersResponse>("/api/users", { headers });
-  return response.data.users;
+  return response.data?.users ?? [];
 }
 
 /**
