@@ -22,7 +22,6 @@ import MessageBubble from "@/components/message-bubble";
 import MessageComposer from "@/components/message-composer";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { api } from "@/services/api";
 import {
   findOrCreateConversation,
   getConversationDetails,
@@ -326,7 +325,7 @@ export default function ChatScreen() {
     setIsSharingLocation(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== Location.PermissionStatus.GRANTED && status !== "granted") {
+      if (status !== Location.PermissionStatus.GRANTED) {
         showAlert(
           "Location Permission Denied",
           "Permission to access device location was denied. Please enable location permissions in your device settings to share your meeting spot."

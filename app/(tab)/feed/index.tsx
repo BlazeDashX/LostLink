@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, SafeAreaView, StyleSheet, View } from "react-native";
 
 import AppHeader from "@/components/app-header";
@@ -22,14 +22,19 @@ export default function FeedScreen() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
+      console.log("[FeedScreen] Fetching items from PostgreSQL database...");
       const [freshItems, freshClaims] = await Promise.allSettled([
         getAllItems(currentUserId),
         getClaims({}, currentUserId),
       ]);
-      if (freshItems.status === "fulfilled" && freshItems.value?.length) {
+      if (freshItems.status === "fulfilled" && Array.isArray(freshItems.value)) {
+        console.log(`[FeedScreen] Received ${freshItems.value.length} items from database.`);
         setItems(freshItems.value);
+      } else if (freshItems.status === "rejected") {
+        console.error("[FeedScreen] Failed to fetch items from database:", freshItems.reason);
       }
-      if (freshClaims.status === "fulfilled" && freshClaims.value?.length) {
+
+      if (freshClaims.status === "fulfilled" && Array.isArray(freshClaims.value)) {
         setClaims(freshClaims.value);
       }
     } catch (err) {
@@ -38,6 +43,10 @@ export default function FeedScreen() {
       setIsRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    handleRefresh();
+  }, [currentUserId]);
 
   const synchronizedItems = useMemo(() => {
     return items.map((item) => {
@@ -58,7 +67,12 @@ export default function FeedScreen() {
   const filteredItems = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
 
-    return synchronizedItems.filter((item) => {
+    // Feed will show all the active and pending reports
+    const activeAndPendingItems = synchronizedItems.filter(
+      (item) => item.status === "Active" || item.status === "Pending Claim"
+    );
+
+    return activeAndPendingItems.filter((item) => {
       if (selectedFilter !== "All" && item.type !== selectedFilter) {
         return false;
       }

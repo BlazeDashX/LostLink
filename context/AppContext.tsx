@@ -9,10 +9,10 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import usersData from "@/data/users.json";
-import itemsData from "@/data/items.json";
 import messagesData from "@/data/message.json";
 import claimsData from "@/data/claims.json";
 import notificationsData from "@/data/notifications.json";
+import { getAllItems } from "@/services/items";
 
 import {
   User,
@@ -124,28 +124,23 @@ export function AppProvider({
       )
     );
 
-    setItems(itemsData as Item[]);
+    setItems([]);
     setMessages(messagesData as Message[]);
     setClaims(claimsData as Claim[]);
     setNotifications(notificationsData as Notification[]);
 
-    // Automatically sync initial item statuses with claims
-    const initialClaims = claimsData as Claim[];
-    setItems((prevItems) =>
-      prevItems.map((item) => {
-        const matchingClaims = initialClaims.filter((c) => c.itemId === item.id);
-        if (matchingClaims.some((c) => c.status === "Completed")) {
-          return { ...item, status: "Solved" };
+    const fetchDbItems = async (userId?: string | null) => {
+      try {
+        const freshItems = await getAllItems(userId);
+        if (freshItems && Array.isArray(freshItems)) {
+          setItems(freshItems);
         }
-        if (matchingClaims.some((c) => c.status === "Approved")) {
-          return { ...item, status: "Reserved" };
-        }
-        if (matchingClaims.some((c) => c.status === "Pending") && item.status === "Active") {
-          return { ...item, status: "Pending Claim" };
-        }
-        return item;
-      })
-    );
+      } catch (err) {
+        console.warn("Failed to fetch initial items from PostgreSQL:", err);
+      }
+    };
+
+    fetchDbItems();
 
     const restoreSession = async () => {
       try {
