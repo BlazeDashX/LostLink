@@ -1,5 +1,10 @@
 const db = require("../db");
 
+/**
+ * Find user by email directly in PostgreSQL users table.
+ * @param {string} email
+ * @returns {Promise<Object|null>}
+ */
 async function findUserByEmail(email) {
   if (!email) return null;
 
@@ -24,6 +29,11 @@ async function findUserByEmail(email) {
   return result.rows[0] || null;
 }
 
+/**
+ * Insert a new user strictly into PostgreSQL users table.
+ * @param {Object} user
+ * @returns {Promise<Object>}
+ */
 async function createUser(user) {
   const result = await db.query(
     `

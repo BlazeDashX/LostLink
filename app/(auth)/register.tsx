@@ -17,7 +17,8 @@ import { COLORS } from "@/constants/colors";
 import FormField from "@/components/FormField";
 import PrimaryButton from "@/components/PrimaryButton";
 
-import { api, BASE_URL } from "@/services/api";
+import { api } from "@/services/api";
+import { useApp } from "@/context/AppContext";
 
 interface FormErrors {
   name: string;
@@ -36,6 +37,7 @@ interface TouchedFields {
 }
 
 export default function RegisterScreen() {
+  const { setUsers } = useApp();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");

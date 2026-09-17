@@ -34,7 +34,7 @@ type CategoryItem = {
 };
 
 export default function ItemDetailsScreen() {
-  const { id } = useLocalSearchParams() as { id: string };
+  const { id, from } = useLocalSearchParams() as { id: string; from?: string };
   const { claims, currentUserId, items, setItems, messages, setMessages, users } = useApp();
   const [isDeleting, setIsDeleting] = useState(false);
   const [fetchedItem, setFetchedItem] = useState<Item | null>(null);
@@ -129,6 +129,18 @@ export default function ItemDetailsScreen() {
       (claim) => claim.itemId === item.id && claim.claimantId === currentUserId
     );
   }, [claims, currentUserId, item]);
+
+  const handleBack = () => {
+    if (from === "admin" || currentUser?.role === "Admin") {
+      router.replace("/(admin)/admin-management" as any);
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tab)/feed" as any);
+    }
+  };
 
   if (!id || !item) {
     return (
@@ -230,7 +242,9 @@ export default function ItemDetailsScreen() {
                 {
                   text: "OK",
                   onPress: () => {
-                    if (router.canGoBack()) {
+                    if (from === "admin" || currentUser?.role === "Admin") {
+                      router.replace("/(admin)/admin-management" as any);
+                    } else if (router.canGoBack()) {
                       router.back();
                     } else {
                       router.push("/feed" as any);
