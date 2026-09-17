@@ -36,7 +36,16 @@ type CategoryItem = {
 
 export default function ItemDetailsScreen() {
   const { id, from } = useLocalSearchParams() as { id: string; from?: string };
-  const { claims, currentUserId, items, setItems, messages, setMessages, users } = useApp();
+  const {
+    claims,
+    currentUserId,
+    currentUser: contextUser,
+    items,
+    setItems,
+    messages,
+    setMessages,
+    users,
+  } = useApp();
   const [isDeleting, setIsDeleting] = useState(false);
   const [fetchedItem, setFetchedItem] = useState<Item | null>(null);
   const [fetchedClaims, setFetchedClaims] = useState<Claim[]>([]);
@@ -121,7 +130,7 @@ export default function ItemDetailsScreen() {
   );
 
   const isReporter = item?.reporterId === currentUserId;
-  const currentUser = users.find((user) => user.id === currentUserId);
+  const currentUser = contextUser || users.find((user) => user.id === currentUserId);
   const isReporterOrAdmin = isReporter || currentUser?.role === "Admin";
 
   const currentUserClaim = useMemo(() => {
@@ -146,7 +155,7 @@ export default function ItemDetailsScreen() {
   if (!id || !item) {
     return (
       <SafeAreaView edges={["top"]} style={styles.screen}>
-        <AppHeader showBack title="Item Details" />
+        <AppHeader onPressBack={handleBack} showBack title="Item Details" />
         <EmptyState
           icon="alert-circle-outline"
           message="The requested item could not be found or has been removed."
@@ -262,7 +271,12 @@ export default function ItemDetailsScreen() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
-      <AppHeader showBack subtitle={`Item Ref: ${item.id}`} title="Item Details" />
+      <AppHeader
+        onPressBack={handleBack}
+        showBack
+        subtitle={`Item Ref: ${item.id}`}
+        title="Item Details"
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         {itemImageUrl && !imageError ? (
@@ -440,7 +454,10 @@ export default function ItemDetailsScreen() {
                 onPress={() => {
                   router.push({
                     pathname: "/report",
-                    params: { editId: item.id },
+                    params: {
+                      editId: item.id,
+                      from: from || (currentUser?.role === "Admin" ? "admin" : undefined),
+                    },
                   } as any);
                 }}
               />

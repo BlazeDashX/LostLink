@@ -6,8 +6,14 @@ import { useApp } from "@/context/AppContext";
 import { COLORS } from "@/constants/colors";
 
 export default function TabLayout() {
-  const { isAuthenticated } = useApp();
+  const { isAuthenticated, currentUser, currentUserId, users, authLoading } = useApp();
+  const user = currentUser || users.find((u) => u.id === currentUserId);
+  const isAdmin = user?.role === "Admin";
   const insets = useSafeAreaInsets();
+
+  if (authLoading) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
@@ -17,18 +23,21 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      tabBar={isAdmin ? () => null : undefined}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textSecondary,
-        tabBarStyle: {
-          backgroundColor: COLORS.white,
-          borderTopColor: COLORS.border,
-          borderTopWidth: 1,
-          height: 58 + bottomInset,
-          paddingBottom: bottomInset,
-          paddingTop: 6,
-        },
+        tabBarStyle: isAdmin
+          ? { display: "none" }
+          : {
+              backgroundColor: COLORS.white,
+              borderTopColor: COLORS.border,
+              borderTopWidth: 1,
+              height: 58 + bottomInset,
+              paddingBottom: bottomInset,
+              paddingTop: 6,
+            },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
