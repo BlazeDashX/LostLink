@@ -27,7 +27,7 @@ export default function ChatScreen() {
   } = useApp();
 
   const conversationMessages = useMemo(() => {
-    return messages
+    return (messages || [])
       .filter((message) => message.conversationId === conversationId)
       .sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
   }, [conversationId, messages]);

@@ -1,7 +1,7 @@
 const { query } = require("../db");
 
 /**
- * Authentication middleware to verify user identity.
+ * Authentication middleware to verify user identity strictly from PostgreSQL.
  * Checks x-user-id header, Authorization Bearer token, or body.reporterId.
  * Validates against Neon PostgreSQL users table and checks for Suspended status.
  */
@@ -31,7 +31,7 @@ async function requireAuth(req, res, next) {
       [userId]
     );
 
-    if (result.rowCount === 0) {
+    if (!result || result.rowCount === 0) {
       return res.status(401).json({
         message: "Invalid session or user not found.",
       });

@@ -20,6 +20,7 @@ import FormField from "@/components/FormField";
 import PrimaryButton from "@/components/PrimaryButton";
 
 import { api } from "@/services/api";
+import { useApp } from "@/context/AppContext";
 
 interface FormErrors {
   name: string;
@@ -38,6 +39,7 @@ interface TouchedFields {
 }
 
 export default function RegisterScreen() {
+  const { setUsers } = useApp();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -243,6 +245,13 @@ export default function RegisterScreen() {
         phone: phone.trim(),
         password,
       });
+
+      if (response.data?.user) {
+        setUsers((prev) => {
+          const exists = prev.some((u) => u.id === response.data.user.id || u.email.toLowerCase() === response.data.user.email.toLowerCase());
+          return exists ? prev : [response.data.user, ...prev];
+        });
+      }
 
       showAlert(
         "Registration Successful",

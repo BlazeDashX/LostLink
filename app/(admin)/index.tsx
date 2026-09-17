@@ -1,4 +1,4 @@
-﻿// screens/AdminDashboardScreen.tsx
+// screens/AdminDashboardScreen.tsx
 // SRS 13.16 — Admin Dashboard Screen
 import React, { useCallback, useState } from "react";
 import {
@@ -33,9 +33,10 @@ const COLORS = {
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
-  const { currentUserId, notifications, currentUser } = useApp();
+  const { currentUserId, currentUser, logout } = useApp();
+  const adminId = currentUserId || currentUser?.id || "A001";
 
-  // ── Backend dashboard metrics ────────────────────────────────────────────
+  // ── Live PostgreSQL Dashboard Metrics ─────────────────────────────────────
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,18 +45,18 @@ export default function AdminDashboardScreen() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await getAdminStats(currentUserId);
+      const data = await getAdminStats(adminId);
       setStats(data);
     } catch (err: any) {
       setError(
-        err?.response?.data?.message ?? "Failed to load dashboard metrics. Tap Retry."
+        err?.response?.data?.message ?? "Failed to load dashboard metrics from database. Tap Retry."
       );
     } finally {
       setIsLoading(false);
     }
-  }, [currentUserId]);
+  }, [adminId]);
 
-  // Re-fetch every time the screen is focused
+  // Re-fetch live database metrics every time the screen is focused
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -63,12 +64,12 @@ export default function AdminDashboardScreen() {
         setIsLoading(true);
         setError(null);
         try {
-          const data = await getAdminStats(currentUserId);
+          const data = await getAdminStats(adminId);
           if (!cancelled) setStats(data);
         } catch (err: any) {
           if (!cancelled) {
             setError(
-              err?.response?.data?.message ?? "Failed to load dashboard metrics. Tap Retry."
+              err?.response?.data?.message ?? "Failed to load dashboard metrics from database. Tap Retry."
             );
           }
         } finally {
@@ -77,14 +78,8 @@ export default function AdminDashboardScreen() {
       }
       fetchOnFocus();
       return () => { cancelled = true; };
-    }, [currentUserId])
+    }, [adminId])
   );
-
-  // ── Derived from AppContext (claims still local) ─────────────────────────
-  // Unread notification badge — still from local AppContext
-  const unreadCount = (notifications ?? []).filter(
-    (n) => n.userId === currentUserId && !n.read
-  ).length;
 
   // ── Render helpers ────────────────────────────────────────────────────────
 
@@ -170,10 +165,19 @@ export default function AdminDashboardScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
         <Text style={styles.header}>Admin Dashboard</Text>
-        <TouchableOpacity style={styles.bellWrap} onPress={() => router.push("/home/notifications")}>
-          <Text style={styles.bellIcon}>⟳</Text>
-          {unreadCount > 0 && <View style={styles.bellDot} />}
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={async () => {
+              await logout();
+              router.replace("/(auth)/login");
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Logout from admin"
+          >
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* SRS 13.16.6 — System overview metrics from backend */}
@@ -246,9 +250,18 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 48 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   header: { fontSize: 22, fontWeight: "700", color: COLORS.text },
-  bellWrap: { padding: 6 },
-  bellIcon: { fontSize: 18, color: COLORS.text },
-  bellDot: { position: "absolute", top: 4, right: 4, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.red },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  logoutButton: {
+    backgroundColor: COLORS.redLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  logoutButtonText: {
+    color: COLORS.red,
+    fontSize: 12,
+    fontWeight: "700",
+  },
   sectionTitle: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginTop: 20, marginBottom: 12 },
   metricsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   metricCard: { width: "47%", borderRadius: 14, padding: 16, marginBottom: 12 },

@@ -24,10 +24,22 @@ export default function ClaimReviewScreen() {
   const claimant = users.find((user) => user.id === claim?.claimantId);
   const currentUser = users.find((user) => user.id === currentUserId);
 
+  const handleBack = () => {
+    if (currentUser?.role === "Admin") {
+      router.replace("/(admin)/admin-management" as any);
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tab)/report" as any);
+    }
+  };
+
   if (!claimId || !claim || !item || !claimant || !currentUser) {
     return (
       <SafeAreaView style={styles.screen}>
-        <AppHeader showBack title="Claim Review" />
+        <AppHeader showBack onPressBack={handleBack} title="Claim Review" />
         <EmptyState icon="alert-circle-outline" message="The claim, item, or claimant could not be resolved." title="Claim unavailable" />
       </SafeAreaView>
     );
@@ -40,7 +52,7 @@ export default function ClaimReviewScreen() {
   if (!canView) {
     return (
       <SafeAreaView style={styles.screen}>
-        <AppHeader showBack title="Claim Review" />
+        <AppHeader showBack onPressBack={handleBack} title="Claim Review" />
         <EmptyState icon="lock-closed-outline" message="Only the item reporter, claimant, or an admin can view this claim." title="Access denied" />
       </SafeAreaView>
     );
@@ -75,7 +87,20 @@ export default function ClaimReviewScreen() {
           onPress: () => {
             const result = rejectClaim(claim.id);
             Alert.alert(result.ok ? "Claim rejected" : "Unable to reject", result.message, [
-              { text: "OK", onPress: () => result.ok && router.back() },
+              {
+                text: "OK",
+                onPress: () => {
+                  if (result.ok) {
+                    if (currentUser.role === "Admin") {
+                      router.replace("/(admin)/admin-management" as any);
+                    } else if (router.canGoBack()) {
+                      router.back();
+                    } else {
+                      router.replace("/(tab)/report" as any);
+                    }
+                  }
+                },
+              },
             ]);
           },
         },
@@ -85,7 +110,12 @@ export default function ClaimReviewScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <AppHeader showBack subtitle={`Claim ${claim.id}`} title="Claim Review" />
+      <AppHeader
+        showBack
+        onPressBack={handleBack}
+        subtitle={`Claim ${claim.id}`}
+        title="Claim Review"
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.statusRow}>
           <View>
@@ -98,7 +128,15 @@ export default function ClaimReviewScreen() {
         </View>
 
         <View style={styles.sectionGap}>
-          <ItemSummaryCard item={item} />
+          <ItemSummaryCard
+            item={item}
+            onPress={() =>
+              router.push({
+                pathname: "/report/item/[id]" as any,
+                params: { id: item.id, from: currentUser?.role === "Admin" ? "admin" : undefined },
+              })
+            }
+          />
         </View>
         <View style={styles.sectionGap}>
           <ClaimantCard claimant={claimant} />

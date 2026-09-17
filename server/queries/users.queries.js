@@ -1,38 +1,61 @@
-﻿const { query } = require("../db");
+const { query } = require("../db");
 
 /**
- * Retrieve all users from the PostgreSQL users table.
+ * Retrieve all users strictly from the PostgreSQL users table.
  * Passwords are never selected.
  * @returns {Promise<Array<Object>>} List of safe users
  */
-async function getAllUsers() {`
-  const sql = 
+async function getAllUsers() {
+  const sql = `
     SELECT id, name, email, phone, role, status, avatar
     FROM users
     ORDER BY role DESC, name ASC
-  ;
+  `;
   const result = await query(sql);
-  return result.rows;
-`}
+  return result.rows || [];
+}
 
 /**
- * Update a user's status field by ID.
+ * Update a user's status field in PostgreSQL by ID.
  * @param {string} id - User ID
  * @param {string} status - New status value ('Active' | 'Suspended')
  * @returns {Promise<Object|null>} Updated safe user or null if not found
  */
-async function updateUserStatus(id, status) {`
-  const sql = 
+async function updateUserStatus(id, status) {
+  const sql = `
     UPDATE users
-    SET status = 
-    WHERE id = 
+    SET status = $2
+    WHERE id = $1
     RETURNING id, name, email, phone, role, status, avatar
-  ;
+  `;
   const result = await query(sql, [id, status]);
   return result.rows[0] || null;
-`}
+}
+
+/**
+ * Delete a user by ID in PostgreSQL, cleaning dependent relations.
+ * @param {string} id - User ID
+ * @returns {Promise<Object|null>} Deleted safe user or null if not found
+ */
+async function deleteUser(id) {
+  // 1. Clean up dependent user records to preserve relational integrity
+  await query("DELETE FROM notifications WHERE user_id = $1", [id]);
+  await query("DELETE FROM messages WHERE sender_id = $1", [id]);
+  await query("DELETE FROM claims WHERE claimant_id = $1 OR reviewed_by = $1", [id]);
+  await query("DELETE FROM items WHERE reporter_id = $1", [id]);
+
+  // 2. Delete user
+  const sql = `
+    DELETE FROM users
+    WHERE id = $1
+    RETURNING id, name, email, phone, role, status, avatar
+  `;
+  const result = await query(sql, [id]);
+  return result.rows[0] || null;
+}
 
 module.exports = {
   getAllUsers,
   updateUserStatus,
+  deleteUser,
 };

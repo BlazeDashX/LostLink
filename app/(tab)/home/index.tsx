@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 import AppHeader from "@/components/app-header";
@@ -8,7 +8,11 @@ import { COLORS, SPACING } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 
 export default function HomeScreen() {
-  const { currentUserId, items, claims, notifications } = useApp();
+  const { currentUserId, currentUser, items, claims, notifications } = useApp();
+
+  if (currentUser?.role === "Admin") {
+    return <Redirect href="/(admin)" />;
+  }
 
   const userNotifications = notifications.filter(
     (n) => n.userId === currentUserId

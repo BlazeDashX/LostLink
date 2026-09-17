@@ -21,7 +21,7 @@ export async function getAllUsers(userId?: string | null): Promise<User[]> {
     headers["x-user-id"] = userId;
   }
   const response = await api.get<UsersResponse>("/api/users", { headers });
-  return response.data.users;
+  return response.data?.users ?? [];
 }
 
 /**
@@ -42,6 +42,31 @@ export async function updateUserStatus(
   const response = await api.patch<UpdateUserResponse>(
     `/api/users/${targetUserId}`,
     { status },
+    { headers }
+  );
+  return response.data;
+}
+
+export interface DeleteUserResponse {
+  message: string;
+  user: User;
+}
+
+/**
+ * Permanently delete a user via DELETE /api/users/:id.
+ * @param adminId Authenticated admin user ID (sent in x-user-id header)
+ * @param targetUserId ID of the user to delete
+ */
+export async function deleteUser(
+  adminId: string | null,
+  targetUserId: string
+): Promise<DeleteUserResponse> {
+  const headers: Record<string, string> = {};
+  if (adminId) {
+    headers["x-user-id"] = adminId;
+  }
+  const response = await api.delete<DeleteUserResponse>(
+    `/api/users/${targetUserId}`,
     { headers }
   );
   return response.data;
