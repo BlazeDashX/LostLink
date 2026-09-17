@@ -33,8 +33,8 @@ type Tab = "Users" | "Items" | "Claims";
 
 export default function AdminManagementScreen() {
   const router = useRouter();
-  const { currentUserId, items, setItems, claims } = useApp();
-  console.log("ADMIN MANAGEMENT - claims:", claims);
+  const { currentUserId, currentUser, items, setItems, claims } = useApp();
+  const adminId = currentUserId || currentUser?.id || "A001";
 
   const [tab, setTab] = useState<Tab>("Users");
   const [query, setQuery] = useState("");
