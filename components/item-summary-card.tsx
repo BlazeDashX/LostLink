@@ -1,8 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { router } from "expo-router";
+import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { COLORS, SPACING } from "@/constants/theme";
+import { resolveItemImageUrl } from "@/services/imageUtils";
 import { Item } from "@/types";
 import StatusBadge from "./status-badge";
 
@@ -12,6 +15,9 @@ interface ItemSummaryCardProps {
 }
 
 export default function ItemSummaryCard({ item, onPress }: ItemSummaryCardProps) {
+  const [imgError, setImgError] = useState(false);
+  const imageUrl = resolveItemImageUrl(item.image);
+
   const handlePress = () => {
     if (onPress) {
       onPress();
@@ -29,7 +35,17 @@ export default function ItemSummaryCard({ item, onPress }: ItemSummaryCardProps)
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.iconArea}>
-        <Ionicons color={COLORS.primary} name="cube-outline" size={30} />
+        {imageUrl && !imgError ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.thumbImage}
+            contentFit="cover"
+            transition={200}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <Ionicons color={COLORS.primary} name="cube-outline" size={30} />
+        )}
       </View>
       <View style={styles.content}>
         <Text style={styles.type}>{item.type.toUpperCase()} ITEM</Text>
@@ -63,7 +79,12 @@ const styles = StyleSheet.create({
     height: 64,
     justifyContent: "center",
     marginRight: SPACING.md,
+    overflow: "hidden",
     width: 64,
+  },
+  thumbImage: {
+    height: "100%",
+    width: "100%",
   },
   content: { flex: 1 },
   type: { color: COLORS.primary, fontSize: 10, fontWeight: "800", letterSpacing: 0.8 },

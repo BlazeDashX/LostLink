@@ -24,7 +24,7 @@ import {
   ClaimAnswers,
 } from "@/types";
 
-import { api } from "@/services/api";
+import { api, BASE_URL } from "@/services/api";
 
 interface SubmitClaimData {
   itemId: string;
@@ -247,11 +247,15 @@ export function AppProvider({
         user: userForContext,
       };
     } catch (error: any) {
+      const serverMsg = error.response?.data?.message;
+      const networkMsg = error.code === "ECONNABORTED"
+        ? `Server took too long to respond (${BASE_URL}). Please try again.`
+        : error.message === "Network Error"
+        ? `Cannot reach server at ${BASE_URL}. Please check internet connection.`
+        : "Login failed. Please try again.";
       return {
         ok: false,
-        message:
-          error.response?.data?.message ||
-          "Login failed. Please try again.",
+        message: serverMsg || networkMsg,
       };
     }
   };
